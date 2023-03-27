@@ -6,9 +6,17 @@ Sql Builder escrito en Go.
 
 ## Dialectos soportados
 
-* Mysql
+- [x] Mysql  
+- [ ] Postgresql  
+  
 
 ---
+
+## ¿Por que?
+
+Porqué escribir y usar SQL en go es aburrido y trabajoso. Sobre todo en el caso de tener que construirlas dinámicamente.
+
+Hay varios proyectos similares, pero no encontramos ninguno que cumpliera con el requisito de ser liviano, o agregaban también una referencia a la conexión u otras dependencias.
 
 
 ## Instalación
@@ -39,6 +47,10 @@ produce la siguiente consulta en la variable `q`:
 ```
 SELECT id,name,mail, `columna con espacios en el nombre` FROM users AS u 
 ```
+
+
+
+
 
 ## Benchmarks
 
