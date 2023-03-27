@@ -45,7 +45,7 @@ q := b.Select(
 produce la siguiente consulta en la variable `q`: 
 
 ```
-SELECT id,name,mail, `columna con espacios en el nombre` FROM users AS u 
+SELECT id,name,mail, `columna con espacios en el nombre` FROM users u 
 ```
 
 
