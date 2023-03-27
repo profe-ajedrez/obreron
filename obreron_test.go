@@ -12,7 +12,7 @@ func TestSimpleSQlBuild(t *testing.T) {
 
 	t.Log(q)
 
-	expected := "SELECT id,`columna_de_nombre_largo` FROM table_a AS t "
+	expected := "SELECT id,`columna_de_nombre_largo` FROM table_a t "
 
 	if q != expected {
 		t.Logf("expected : %s", expected)
@@ -32,7 +32,7 @@ func TestOtheSimpleSQlBuild(t *testing.T) {
 
 	t.Log(q)
 
-	expected := "SELECT id,name,mail,`columna con espacios en el nombre` FROM users AS u "
+	expected := "SELECT id,name,mail,`columna con espacios en el nombre` FROM users u "
 
 	if q != expected {
 		t.Logf("expected : %s", expected)
@@ -54,7 +54,7 @@ func TestSubQuerySQlBuild(t *testing.T) {
 
 	t.Log(q)
 
-	expected := "SELECT id,(SELECT SUM(monto_neto) AS monto_neto FROM table_c AS cc ) FROM table_a AS t "
+	expected := "SELECT id,(SELECT SUM(monto_neto) AS monto_neto FROM table_c AS cc ) FROM table_a t "
 
 	if q != expected {
 		t.Logf("expected : %s", expected)
@@ -100,7 +100,7 @@ func TestAddingColumnsAfter(t *testing.T) {
 	q := b.String()
 	t.Log(q)
 
-	expected := "SELECT id,`columna_de_nombre_largo`,`esta_columna_se_agregara_despues_de_formado_el_builder` AS otro_alias FROM table_a AS t  LIMIT 10 "
+	expected := "SELECT id,`columna_de_nombre_largo`,`esta_columna_se_agregara_despues_de_formado_el_builder` AS otro_alias FROM table_a t  LIMIT 10 "
 
 	if q != expected {
 		t.Logf("expected : %s", expected)
@@ -125,7 +125,7 @@ func TestOrderBy(t *testing.T) {
 	q := b.OrderBy("1 ASC").String()
 	t.Log(q)
 
-	expected := "SELECT id,`columna_de_nombre_largo`,`esta_columna_se_agregara_despues_de_formado_el_builder` AS otro_alias FROM table_a AS t  ORDER BY 1 ASC  LIMIT 10 "
+	expected := "SELECT id,`columna_de_nombre_largo`,`esta_columna_se_agregara_despues_de_formado_el_builder` AS otro_alias FROM table_a  t  ORDER BY 1 ASC  LIMIT 10 "
 
 	if q != expected {
 		t.Logf("expected : %s", expected)
@@ -142,7 +142,7 @@ func TestJoin(t *testing.T) {
 
 	t.Log(q)
 
-	expected := "SELECT id,(SELECT SUM(monto_neto) AS monto_neto FROM table_c AS cc ) FROM table_a AS t  WHERE 1=1  AND 'B' = 'B'"
+	expected := "SELECT id,(SELECT SUM(monto_neto) AS monto_neto FROM table_c AS cc ) FROM table_a t  WHERE 1=1  AND 'B' = 'B'"
 
 	if q != expected {
 		t.Logf("expected : %s", expected)

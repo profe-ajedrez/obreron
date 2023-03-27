@@ -279,7 +279,7 @@ func (s *Select) AddColumnIf(cond bool, c interface{}, a string) *Select {
 // From define el origen para obtener los datos de la consulta. Puede ser un string u otro sql builder
 func (s *Select) From(source interface{}, a string) *Select {
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y usar clausula AS solo si se definio un alias
-	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, UseAs, a, "", "")
+	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, a, "", "")
 	s.source.WriteString(" FROM ")
 	parse(s, s.source, source, nil, opt)
 	return s
