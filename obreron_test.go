@@ -243,7 +243,6 @@ func heavyQueryBuild(b testing.TB) (string, []interface{}) {
 	q, params := bl2.Build()
 
 	return q, params
-
 }
 
 func BenchmarkJoin(b *testing.B) {
