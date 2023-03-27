@@ -21,9 +21,13 @@ Hay varios proyectos similares, pero no encontramos ninguno que cumpliera con el
 
 ## Instalación
 
+Puede instalar obreron usando `go get`
+
 ```bash
 $ go get github.com/profe-ajedrez/obreron
 ```
+
+
 
 ## Uso
 
@@ -48,8 +52,44 @@ produce la siguiente consulta en la variable `q`:
 SELECT id,name,mail, `columna con espacios en el nombre` FROM users u 
 ```
 
+Pero para eso no necesitamos un Sql Builder. Estos brillan cuando debemos construir consultas dinámicas, como para el caso de armar filtros.
 
+```go
+b := NewMaryBuilder()
 
+	// options es un struct que guarda las opciones para armar el filtro
+	options := struct {
+		useName     bool
+		useFullName bool
+		useAddress  bool
+		status      int8
+		limit       int64
+	}{
+		useName:     true, // agregar columna user_name
+		useFullName: true, // agregar columna useFullName
+		useAddress:  false, // NO agregar columna address
+		status:      0, // para saber como filtrar users por su status
+		limit:       25, // limite para la consulta
+	}
+
+    // Los campos user_id, user_mail y user_type serán agregados a la consulta
+	b.Select(
+		"user_id", "user_mail", "user_type",
+	).From("users", "u").Where().Limit(options.limit)
+
+    // Los campos user_name, user_fullname y user_address se agregaran a la consulta solo si la condición pasada es verdadera
+	b.AddColumnIf(options.useName, "user_name", "").AddColumnIf(options.useFullName, "user_fullname", "")
+	b.AddColumnIf(options.useAddress, "user_address", "")
+
+    // Agregamos una condición en la que decimos que agregue el filtro por user_status si a opción correspondiente es > -1
+	b.AndParamIf(options.status > -1, "user_status", "=", options.status)
+
+    // tras construir la consulta, q contendrá la query y p los parámetros registrados para su uso
+	q, p := b.Build()
+
+```
+
+El ejemplo anterior construye en `q` la consulta `SELECT user_id,user_mail,user_type,user_name,user_fullname FROM users u  WHERE 1=1  AND user_status = ? LIMIT 25 ` y deja en `p`  un `interface {}(int8) 0`
 
 
 ## Benchmarks

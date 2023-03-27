@@ -134,6 +134,43 @@ func TestOrderBy(t *testing.T) {
 }
 
 func TestWhered(t *testing.T) {
+	b := NewMaryBuilder()
+
+	// options es un struct que guarda las opciones para armar el filtro
+	options := struct {
+		useName     bool
+		useFullName bool
+		useAddress  bool
+		status      int8
+		limit       int64
+	}{
+		useName:     true,
+		useFullName: true,
+		useAddress:  false,
+		status:      0,
+		limit:       25,
+	}
+
+	b.Select(
+		"user_id", "user_mail", "user_type",
+	).From("users", "u").Where().Limit(options.limit)
+
+	b.AddColumnIf(options.useName, "user_name", "").AddColumnIf(options.useFullName, "user_fullname", "")
+	b.AddColumnIf(options.useAddress, "user_address", "")
+
+	b.AndParamIf(options.status > -1, "user_status", "=", options.status)
+
+	q, p := b.Build()
+
+	t.Log(q)
+	t.Log(p)
+
+	expected := "SELECT user_id,user_mail,user_type,user_name,user_fullname FROM users u  WHERE 1=1  AND user_status = ? LIMIT 25 "
+
+	if q != expected {
+		t.Logf("expected : %s", expected)
+		t.Logf("generated: %s", q)
+	}
 
 }
 
