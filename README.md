@@ -13,9 +13,9 @@ Sql Builder escrito en Go.
 
 ## Instalación
 
-bash
-
+```bash
 $ go get github.com/profe-ajedrez/obreron
+```
 
 ## Uso
 
