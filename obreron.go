@@ -476,60 +476,60 @@ func (s *Select) Build() (string, []interface{}) {
 }
 
 // parse parsea elementos comunes de la consulta
-func parse(master Builder, subject Builder, circunstance interface{}, parameter interface{}, opt parsingOptions) Builder {
+func parse(master Builder, subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) Builder {
 
-	openHook(subject, circunstance, parameter, opt)
+	openHook(subject, circumstance, parameter, opt)
 
-	switch circunstance.(type) {
+	switch circumstance.(type) {
 	default:
 		return subject
 	case string:
-		parseString(subject, circunstance, parameter, opt)
+		parseString(subject, circumstance, parameter, opt)
 	case Builder:
-		parseBuilder(master, subject, circunstance, parameter, opt)
+		parseBuilder(master, subject, circumstance, parameter, opt)
 	}
 
-	closeHook(master, subject, circunstance, parameter, opt)
+	closeHook(master, subject, circumstance, parameter, opt)
 
 	return subject
 }
 
-// parseString parses a circunstance as string
-func parseString(subject Builder, circunstance interface{}, parameter interface{}, opt parsingOptions) {
-	sc := circunstance.(string)
+// parseString parses a circumstance as string
+func parseString(subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
+	sc := circumstance.(string)
 
 	// if Quote try to escape builder result with backticks
 	if opt.Quote {
 		sc = subject.Dialect().Quote(sc)
 	}
 
-	subject.WriteString(sc)
+	_, _ = subject.WriteString(sc)
 }
 
-// parseBuilder parses a circunstance as Builder
-func parseBuilder(master Builder, subject Builder, circunstance interface{}, parameter interface{}, opt parsingOptions) {
-	b := circunstance.(Builder)
+// parseBuilder parses a circumstance as Builder
+func parseBuilder(master Builder, subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
+	b := circumstance.(Builder)
 
 	if opt.Enclose == EncloseOnlyBuilders {
-		subject.WriteString(subject.Dialect().OpenEnclose())
+		_, _ = subject.WriteString(subject.Dialect().OpenEnclose())
 	}
 
 	// if Quote try to escape builder result wit backticks
 	if opt.Quote {
-		subject.WriteString(
+		_, _ = subject.WriteString(
 			subject.Dialect().Quote(
 				b.String(),
 			),
 		)
 	} else {
-		subject.WriteString(b.String())
+		_, _ = subject.WriteString(b.String())
 	}
 
 	if opt.Enclose == EncloseOnlyBuilders {
-		subject.WriteString(subject.Dialect().CloseEnclose())
+		_, _ = subject.WriteString(subject.Dialect().CloseEnclose())
 	}
 
-	smt, ok := circunstance.(*Select)
+	smt, ok := circumstance.(*Select)
 
 	if ok {
 		subject.AddParam(smt.Params()...)
@@ -545,29 +545,29 @@ func parseBuilder(master Builder, subject Builder, circunstance interface{}, par
 }
 
 // openHook concentra el proceso antes del parseo
-func openHook(subject Builder, circunstance interface{}, parameter interface{}, opt parsingOptions) {
+func openHook(subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
 	// Este hack permite rodear de parentesis solo a circunstancias que sean Builders
 	if opt.Enclose == Enclose {
-		subject.WriteString(subject.Dialect().OpenEnclose())
+		_, _ = subject.WriteString(subject.Dialect().OpenEnclose())
 	}
 }
 
 // closeHook concentra el proceso después del parseo
-func closeHook(master Builder, subject Builder, circunstance interface{}, parameter interface{}, opt parsingOptions) {
+func closeHook(master Builder, subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
 	if opt.Enclose == Enclose {
-		subject.WriteString(subject.Dialect().CloseEnclose())
+		_, _ = subject.WriteString(subject.Dialect().CloseEnclose())
 	}
 
 	if opt.Alias != "" {
 		if opt.UseAS {
-			subject.WriteString(fmt.Sprintf(" AS %v ", opt.Alias))
+			_, _ = subject.WriteString(fmt.Sprintf(" AS %v ", opt.Alias))
 		} else {
-			subject.WriteString(fmt.Sprintf(" %v ", opt.Alias))
+			_, _ = subject.WriteString(fmt.Sprintf(" %v ", opt.Alias))
 		}
 	}
 
 	if opt.On != "" {
-		subject.WriteString(fmt.Sprintf(" ON %v", opt.On))
+		_, _ = subject.WriteString(fmt.Sprintf(" ON %v", opt.On))
 
 		// este if es para agregar los posibles parametros en una clausula on
 		if parameter != nil && parameter != "" {
@@ -576,16 +576,16 @@ func closeHook(master Builder, subject Builder, circunstance interface{}, parame
 	}
 
 	if opt.Operator != "" {
-		subject.WriteString(fmt.Sprintf(" %v ", opt.Operator))
+		_, _ = subject.WriteString(fmt.Sprintf(" %v ", opt.Operator))
 	}
 
 	// // este if es para agregar los posibles parametros en una clausula WHERE
 	// Cuidado! se debe mantener este orden para que funcione el hack de agregar la marca de parámetro junto con el paramètro.
 	// justo después de agregar al operador
 	if parameter != nil && (opt.On == "" && parameter != "") {
-		subject.WriteString(subject.Dialect().ParamMark())
+		_, _ = subject.WriteString(subject.Dialect().ParamMark())
 		subject.AddParam(parameter)
 	}
 
-	opt.AfterWork(subject)
+	_ = opt.AfterWork(subject)
 }
