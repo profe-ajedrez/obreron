@@ -89,9 +89,15 @@ b := NewMaryBuilder()
 
 ```
 
-El ejemplo anterior construye en `q` la consulta `SELECT user_id,user_mail,user_type,user_name,user_fullname FROM users u  WHERE 1=1  AND user_status = ? LIMIT 25 ` y deja en `p`  un `interface {}(int8) 0`
+El ejemplo anterior construye en `q` la consulta 
 
+```sql
+SELECT user_id,user_mail,user_type,user_name,user_fullname FROM users u  WHERE 1=1  AND user_status = ? LIMIT 25 
+```
 
+y deja en `p`  un `[]interface {}(int8) 0
+
+  
 ## Benchmarks
 
 Presentamos el siguiente benchmark
