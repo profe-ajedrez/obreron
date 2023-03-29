@@ -134,34 +134,8 @@ func TestOrderBy(t *testing.T) {
 }
 
 func TestWhered(t *testing.T) {
-	b := NewMaryBuilder()
 
-	// options es un struct que guarda las opciones para armar el filtro
-	options := struct {
-		useName     bool
-		useFullName bool
-		useAddress  bool
-		status      int8
-		limit       int64
-	}{
-		useName:     true,
-		useFullName: true,
-		useAddress:  false,
-		status:      0,
-		limit:       25,
-	}
-
-	b.Select(
-		"user_id", "user_mail", "user_type",
-	).From("users", "u").Where().Limit(options.limit)
-
-	b.AddColumnIf(options.useName, "user_name", "").AddColumnIf(options.useFullName, "user_fullname", "")
-	b.AddColumnIf(options.useAddress, "user_address", "")
-
-	b.AndParamIf(options.status > -1, "user_status", "=", options.status)
-
-	q, p := b.Build()
-
+	q, p := testWhere(t)
 	t.Log(q)
 	t.Log(p)
 
@@ -170,6 +144,26 @@ func TestWhered(t *testing.T) {
 	if q != expected {
 		t.Logf("expected : %s", expected)
 		t.Logf("generated: %s", q)
+		t.FailNow()
+	}
+
+	if len(p) != 1 {
+		t.Log("expected  : 1 params\n")
+		t.Logf("generated: %d", len(p))
+		t.FailNow()
+	}
+
+	p0, ok := p[0].(int8)
+
+	if !ok {
+		t.Log("expected  : int param\n")
+		t.FailNow()
+	}
+
+	if ok && p0 != 0 {
+		t.Log("expected  : 0 as first param\n")
+		t.Logf("generated: %d", p[0])
+		t.FailNow()
 	}
 
 }
@@ -191,6 +185,33 @@ func TestHeavySlBuilder(t *testing.T) {
 	q, p := heavyQueryBuild(t)
 	t.Log(q)
 	t.Log(p)
+
+	expected := "SELECT created_at_ms,fecha_movimiento,nombre_producto,cantidad_entrada,cantidad_salida,stock,costo,codigo_variante_producto,codigo_barras,num_doc_tributario,nombre_tipo_documento,id_venta_documento_tributario,id_detalle_ingreso_stock,id_consumo_stock,usuario_movimiento,id_despacho,uso_documento,numero_serie  FROM (SELECT dd.created_at_ms,d.fecha_despacho AS fecha_movimiento,CONCAT(\n\t\tp.nombre_producto, ' ', vp.descripcion_variante\n\t\t) AS nombre_producto,0 AS cantidad_entrada,dd.cantidad_desp AS cantidad_salida,dd.stock AS stock,dd.costo AS costo,vp.codigo,vp.barras,CASE WHEN vdt.estado = 0 THEN IFNULL(vdt.num_doc, '') ELSE '' END AS num_doc,CASE WHEN vdt.estado = 0 THEN IFNULL(td.nombre_tipo, '') ELSE 'nulo' END AS nombre_tipo,CASE WHEN vdt.estado = 0 THEN IFNULL(\n\t\tvdt.id_documento, \n\t\t0\n\t\t) ELSE -99 END AS id_documento,IFNULL(dd.ids_detalle_ingreso, 0) AS id_detalle_ingreso,0 AS id_consumo,CONCAT(\n\t\tus.nombre_usuario, ' ', us.apellido_usuario\n\t\t) AS usuario_movimiento,d.id_despacho AS id_despacho,td.uso_documento AS uso_documento,dd.id_detalle_despacho,vdt.estado_documento,dd.numero_serie FROM detalle_desp dd  INNER JOIN cart_it ci  ON dd.id_cart_it=ci.id_cart_it INNER JOIN variante vp  ON ci.id_variante= vp.id_variante INNER JOIN producto p  ON vp.id_producto = p.id_producto INNER JOIN detalle_venta_documento_tributario dvdt  ON dd.id_detalle_despacho = dvdt.id_detalle_despacho INNER JOIN (SELECT * FROM documento vdt  WHERE 1=1  AND vdt.id_documento = ?) vdt  ON vdt.id_documento = dvdt.id_documento WHERE 1=1  AND vp.id_variante IS NOT NULL AND d.id_sucursal = ? AND p.clasificacion != ? GROUP BY dd.id_detalle_desp ) out_detail  GROUP BY id_detalle_desp  ORDER BY id_despacho ASC "
+
+	if q != expected {
+		t.Logf("expected : %s", expected)
+		t.Logf("generated: %s", q)
+	}
+
+	if len(p) != 3 {
+		t.Log("expected : 3 params\n")
+		t.Logf("generated: %d\n", len(p))
+	}
+
+	if p[0] != 126 {
+		t.Log("expected p[0] == 126 params\n")
+		t.Logf("generated: %d\n", p[0])
+	}
+
+	if p[1] != 126 {
+		t.Log("expected p[1] == 126 params\n")
+		t.Logf("generated: %d\n", p[1])
+	}
+
+	if p[2] != 3 {
+		t.Log("expected p[2] == 3 params\n")
+		t.Logf("generated: %d\n", p[2])
+	}
 }
 
 func BenchmarkSlBuilder(b *testing.B) {
@@ -300,4 +321,34 @@ func testJoin(t testing.TB) string {
 		"id",
 		b2,
 	).From("table_a", "t").Where().AndParam("'B' = 'B'", "", nil).String()
+}
+
+func testWhere(t testing.TB) (string, []interface{}) {
+	b := NewMaryBuilder()
+
+	// options es un struct que guarda las opciones para armar el filtro
+	options := struct {
+		useName     bool
+		useFullName bool
+		useAddress  bool
+		status      int8
+		limit       int64
+	}{
+		useName:     true,
+		useFullName: true,
+		useAddress:  false,
+		status:      0,
+		limit:       25,
+	}
+
+	b.Select(
+		"user_id", "user_mail", "user_type",
+	).From("users", "u").Where().Limit(options.limit)
+
+	b.AddColumnIf(options.useName, "user_name", "").AddColumnIf(options.useFullName, "user_fullname", "")
+	b.AddColumnIf(options.useAddress, "user_address", "")
+
+	b.AndParamIf(options.status > -1, "user_status", "=", options.status)
+
+	return b.Build()
 }
