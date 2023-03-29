@@ -1,13 +1,10 @@
+// Package obreron es un paquete que permite construir consultas sql dinámicamente
 package obreron
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
-)
-
-var (
-	// compile time check para garantizar que SqlBuilder cumple con la interface
-	_ Builder = &SqlBuilder{}
+	"unsafe"
 )
 
 // parseOpts enmascara el tipo bool para usar constantes para las opciones de parseo de parámetros
@@ -21,6 +18,7 @@ const (
 	// NoEnclose indica NO poner un `(` antes del siguiente estamento
 	NoEnclose = parseOptsMul(2)
 
+	// EncloseOnlyBuilders indica rodear de parentesis solo a SQLBuilders
 	EncloseOnlyBuilders = parseOptsMul(3)
 
 	// UseAs indica agregar una clausula `AS` antes del alias, si hubiera
@@ -32,13 +30,13 @@ const (
 	// Quote indica si escapar con backticks el siguiente identificador
 	Quote = parseOpts(true)
 
-	// Quote indica NO escapar con backticks el siguiente identificador
+	// NoQuote indica NO escapar con backticks el siguiente identificador
 	NoQuote = parseOpts(false)
 )
 
 // parsingOptions contiene opciones de parseo de elementos del query builder
 type parsingOptions struct {
-	AfterWork func(b Builder) error
+	AfterWork func(b *SQLBuilder) error
 	Alias     string
 	Operator  string
 	On        string
@@ -47,119 +45,77 @@ type parsingOptions struct {
 	Quote     parseOpts
 }
 
-// NewParsingOpts e Enclose, q Quote, u UseAs, a Alias, o Operator, on clausula ON
-func NewParsingOpts(e parseOptsMul, q, u parseOpts, a string, o string, on string) parsingOptions {
-	return parsingOptions{
+// newParsingOpts e Enclose, q Quote, u UseAs, a Alias, o Operator, on clausula ON
+func newParsingOpts(e parseOptsMul, q, u parseOpts, a string, o string, on string) *parsingOptions {
+	return &parsingOptions{
 		Enclose:  e,
 		Alias:    a,
 		Operator: o,
 		UseAS:    u,
 		Quote:    q,
 		On:       on,
-		AfterWork: func(b Builder) error {
+		AfterWork: func(b *SQLBuilder) error {
 			return nil
 		},
 	}
 }
 
-// Builder es una interface que representa una cosa capaz de agregar strings a un buffer y de construir algo con esos string agregados
-type Builder interface {
-	// Len returns the number of accumulated bytes; b.Len() == len(b.String()).
-	Len() int
-
-	// Cap returns the capacity of the builder's underlying byte slice. It is the
-	// total space allocated for the string being built and includes any bytes
-	// already written.
-	Cap() int
-
-	// Grow grows b's capacity, if necessary, to guarantee space for
-	// another n bytes. After Grow(n), at least n bytes can be written to b
-	// without another allocation. If n is negative, Grow panics.
-	Grow(n int)
-
-	// Write appends the contents of p to b's buffer.
-	// Write always returns len(p), nil.
-	Write(p []byte) (int, error)
-
-	// WriteByte appends the byte c to b's buffer.
-	// The returned error is always nil.
-	WriteByte(c byte) error
-
-	// WriteRune appends the UTF-8 encoding of Unicode code point r to b's buffer.
-	// It returns the length of r and a nil error.
-	WriteRune(r rune) (int, error)
-
-	// WriteString appends the contents of s to b's buffer.
-	// It returns the length of s and a nil error.
-	WriteString(s string) (int, error)
-
-	// String returns the accumulated string.
-	String() string
-
-	// Params retorna un slice con los paramétros que reemplazaran los marcadores en el buffer
-	Params() []interface{}
-
-	// Reset resets the Builder to be empty.
-	Reset()
-
-	// Build devuelve el string construido por obreron.Builder y los paramétros agregados para reemplazar a los marcadores en el buffer
-	Build() (string, []interface{})
-
-	// AddParam Agrega uno o mas parámetros para reemplazar los marcadores en el buffer
-	AddParam(p ...interface{})
-
-	// Dialect Retorna el dialecto usado por el builder
-	Dialect() Dialect
-
-	ResetParams()
-}
-
-// SqlBuilder engloba strings.Builder y le da el poder de tener dialecto y parámetros
-type SqlBuilder struct {
+// SQLBuilder engloba bytes.Buffer y le da el poder de tener dialecto y parámetros
+type SQLBuilder struct {
 	dialect Dialect
-	strings.Builder
+	bytes.Buffer
 	params []interface{}
 }
 
-func newSqlBuilder(d Dialect) *SqlBuilder {
-	return &SqlBuilder{
-		Builder: strings.Builder{},
-		params:  make([]interface{}, 0),
+func newSQLBuilder(d Dialect) *SQLBuilder {
+	return &SQLBuilder{
+		Buffer:  bytes.Buffer{},
 		dialect: d,
 	}
 }
 
-func (sb *SqlBuilder) Build() (string, []interface{}) {
-	return sb.String(), sb.params
+// Build construye la consulta devolviendo una tupla conteniendola en un string y los parámetros
+// registrados para su uso
+func (sb *SQLBuilder) Build() (string, []interface{}) {
+	return *(*string)(unsafe.Pointer(&sb.Buffer)), sb.params
 }
 
-func (sb *SqlBuilder) AddParam(p ...interface{}) {
-	sb.params = append(sb.params, p...)
+// AddParam agrega un paràmetro al SQLBuilder
+func (sb *SQLBuilder) AddParam(p ...interface{}) {
+	if len(p) > 0 {
+		if len(sb.params) == 0 {
+			sb.params = make([]interface{}, 0, len(p))
+		}
+		sb.params = append(sb.params, p...)
+	}
 }
 
-func (sb *SqlBuilder) Params() []interface{} {
+// Params devuelve el slice de parámetros del SQLBuilder
+func (sb *SQLBuilder) Params() []interface{} {
 	return sb.params
 }
 
-func (sb *SqlBuilder) Dialect() Dialect {
+// Dialect devuelve el dialecto de la consulta
+func (sb *SQLBuilder) Dialect() Dialect {
 	return sb.dialect
 }
 
-func (sb *SqlBuilder) ResetParams() {
-	sb.params = nil
+// ResetParams resetea el slices de parámetros
+func (sb *SQLBuilder) ResetParams() {
+	sb.params = make([]interface{}, 0)
 }
 
 // Select es el builder para consultas que tienen datos
 type Select struct {
-	columns *SqlBuilder
-	joins   *SqlBuilder
-	filter  *SqlBuilder
-	order   *SqlBuilder
-	source  *SqlBuilder
-	group   *SqlBuilder
-	having  *SqlBuilder
+	columns *SQLBuilder
+	joins   *SQLBuilder
+	filter  *SQLBuilder
+	order   *SQLBuilder
+	source  *SQLBuilder
+	group   *SQLBuilder
+	having  *SQLBuilder
 
-	*SqlBuilder
+	*SQLBuilder
 
 	limit  int64
 	offset int64
@@ -170,27 +126,31 @@ func NewMaryBuilder() *Select {
 
 	d := Mysql{}
 	s := Select{
-		columns:    newSqlBuilder(d),
-		joins:      newSqlBuilder(d),
-		filter:     newSqlBuilder(d),
-		order:      newSqlBuilder(d),
-		source:     newSqlBuilder(d),
-		group:      newSqlBuilder(d),
-		having:     newSqlBuilder(d),
-		SqlBuilder: newSqlBuilder(d),
+		columns:    newSQLBuilder(d),
+		joins:      newSQLBuilder(d),
+		filter:     newSQLBuilder(d),
+		order:      newSQLBuilder(d),
+		source:     newSQLBuilder(d),
+		group:      newSQLBuilder(d),
+		having:     newSQLBuilder(d),
+		SQLBuilder: newSQLBuilder(d),
 		limit:      -1,
 		offset:     -1,
 	}
 	return &s
 }
 
+// Params devuelve los paramétros registrados para los componentes de la consulta
+// en el orden esperado para las distintistas clausulas
 func (s *Select) Params() []interface{} {
 	sz := struct {
+		// size cantidad total de paramétros a recibir
 		size int
-		lc   int
-		ls   int
-		lj   int
-		lf   int
+		// lc lc paràmetros de columns
+		lc int
+		ls int
+		lj int
+		lf int
 	}{}
 
 	if l := len(s.columns.params); l > 0 {
@@ -249,26 +209,25 @@ func (s *Select) Offset(o int64) *Select {
 func (s *Select) Select(cs ...interface{}) *Select {
 	s.columns.Reset()
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS
-	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", "", "")
+	opt := newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", "", "")
 
 	for _, c := range cs {
-		parse(s, s.columns, c, nil, opt)
-		s.columns.WriteString(",")
+		parse(s.columns, c, nil, opt)
+		s.columns.WriteByte(44)
 	}
 
 	return s
 }
 
-// AddColum agrega una columna con su alias. la columna c puede ser string u otro SqlBuilder. Puede omitir el alias pasando un string vacio
+// AddColumn agrega una columna con su alias. la columna c puede ser string u otro SQLBuilder. Puede omitir el alias pasando un string vacio
 func (s *Select) AddColumn(c interface{}, a string) *Select {
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS
-	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, UseAs, a, "", "")
-
-	parse(s, s.columns, c, nil, opt)
+	parse(s.columns, c, nil, newParsingOpts(EncloseOnlyBuilders, NoQuote, UseAs, a, "", ""))
+	s.columns.WriteByte(44)
 	return s
 }
 
-// AddColumIf  agrega una columna con su alias si se cumple condición cond. la columna c puede ser string u otro SqlBuilder. Puede omitir el alias pasando un string vacio
+// AddColumnIf agrega una columna con su alias si se cumple condición cond. la columna c puede ser string u otro SQLBuilder. Puede omitir el alias pasando un string vacio
 func (s *Select) AddColumnIf(cond bool, c interface{}, a string) *Select {
 	if cond {
 		s.AddColumn(c, a)
@@ -279,35 +238,34 @@ func (s *Select) AddColumnIf(cond bool, c interface{}, a string) *Select {
 // From define el origen para obtener los datos de la consulta. Puede ser un string u otro sql builder
 func (s *Select) From(source interface{}, a string) *Select {
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y usar clausula AS solo si se definio un alias
-	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, a, "", "")
 	s.source.WriteString(" FROM ")
-	parse(s, s.source, source, nil, opt)
+	parse(s.source, source, nil, newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, a, "", ""))
 	return s
 }
 
-// Inner Agrega un inner join a la construcción de la query. El joinable c puede ser string o un SqlBuilder
+// Inner Agrega un inner join a la construcción de la query. El joinable c puede ser string o un SQLBuilder
 // a es el alias, si no lo necesita puede pasarlo vacio.
 // on contiene la condición para la clausula on, puede dejarla vacia para que no se agregue
 func (s *Select) Inner(c interface{}, a string, on string) *Select {
 	return s.join(" INNER JOIN ", c, a, on)
 }
 
-// Inner Agrega un left join a la construcción de la query. El joinable c puede ser string o un SqlBuilder
+// Left Agrega un left join a la construcción de la query. El joinable c puede ser string o un SQLBuilder
 // a es el alias, si no lo necesita puede pasarlo vacio.
 // on contiene la condición para la clausula on, puede dejarla vacia para que no se agregue
 func (s *Select) Left(c interface{}, a string, on string) *Select {
 	return s.join(" LEFT JOIN ", c, a, on)
 }
 
-// Inner Agrega un right join a la construcción de la query. El joinable c puede ser string o un SqlBuilder
+// Right Agrega un right join a la construcción de la query. El joinable c puede ser string o un SQLBuilder
 // a es el alias, si no lo necesita puede pasarlo vacio.
 // on contiene la condición para la clausula on, puede dejarla vacia para que no se agregue
 func (s *Select) Right(c interface{}, a string, on string) *Select {
 	return s.join(" RIGHT JOIN ", c, a, on)
 }
 
-// Inner Agrega un right join a la construcción de la query si la condición `cond` es verdadera.
-// El joinable c puede ser string o un SqlBuilder
+// RightIF Agrega un right join a la construcción de la query si la condición `cond` es verdadera.
+// El joinable c puede ser string o un SQLBuilder
 // a es el alias, si no lo necesita puede pasarlo vacio.
 // on contiene la condición para la clausula on, puede dejarla vacia para que no se agregue
 func (s *Select) RightIF(cond bool, c interface{}, a string, on string) *Select {
@@ -317,8 +275,8 @@ func (s *Select) RightIF(cond bool, c interface{}, a string, on string) *Select 
 	return s
 }
 
-// Inner Agrega un inner join a la construcción de la query si la condición `cond` es verdadera.
-// El joinable c puede ser string o un SqlBuilder
+// InnerIf Agrega un inner join a la construcción de la query si la condición `cond` es verdadera.
+// El joinable c puede ser string o un SQLBuilder
 // a es el alias, si no lo necesita puede pasarlo vacio.
 // on contiene la condición para la clausula on, puede dejarla vacia para que no se agregue
 func (s *Select) InnerIf(cond bool, c interface{}, a string, on string) *Select {
@@ -328,8 +286,8 @@ func (s *Select) InnerIf(cond bool, c interface{}, a string, on string) *Select 
 	return s
 }
 
-// Inner Agrega un left join a la construcción de la query si la condición `cond` es verdadera.
-// El joinable c puede ser string o un SqlBuilder
+// LeftIf Agrega un left join a la construcción de la query si la condición `cond` es verdadera.
+// El joinable c puede ser string o un SQLBuilder
 // a es el alias, si no lo necesita puede pasarlo vacio.
 // on contiene la condición para la clausula on, puede dejarla vacia para que no se agregue
 func (s *Select) LeftIf(cond bool, c interface{}, a string, on string) *Select {
@@ -339,12 +297,11 @@ func (s *Select) LeftIf(cond bool, c interface{}, a string, on string) *Select {
 	return s
 }
 
-// join es un mètodo helper privado que ayuda a la construcción de joines
+// join es un método helper privado que ayuda a la construcción de joines
 func (s *Select) join(j string, c interface{}, a string, on string) *Select {
 	s.joins.WriteString(j)
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS usando alias solo si se definio, pasando el on
-	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, a, "", on)
-	parse(s, s.joins, c, "", opt)
+	parse(s.joins, c, "", newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, a, "", on))
 	return s
 }
 
@@ -375,19 +332,18 @@ func (s *Select) Where() *Select {
 }
 
 // AndParam Agrega una condición usando conector AND
-// c puede ser la condición como string o como un SqlBuilder
+// c puede ser la condición como string o como un SQLBuilder
 // op es el operador y param el parámetro de la condición
 func (s *Select) AndParam(c interface{}, op string, param interface{}) *Select {
 	s.filter.WriteString(" AND ")
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS ni  alias
-	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", op, "")
-	parse(s, s.filter, c, param, opt)
+	parse(s.filter, c, param, newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", op, ""))
 
 	return s
 }
 
 // AndParamIf Agrega una condición usando conector AND solo si cond es true
-// c puede ser la condición como string o como un SqlBuilder
+// c puede ser la condición como string o como un SQLBuilder
 // op es el operador y param el parámetro de la condición
 func (s *Select) AndParamIf(cond bool, c interface{}, op string, param interface{}) *Select {
 	if cond {
@@ -405,7 +361,7 @@ func (s *Select) And(c string) *Select {
 
 // AndIf Agrega una condición usando conector AND solo si cond es true
 // c es un strig conteniendo la condición completa
-func (s *Select) AndId(cond bool, c string) *Select {
+func (s *Select) AndIf(cond bool, c string) *Select {
 	if cond {
 		s.AndParam(c, "", nil)
 	}
@@ -413,51 +369,54 @@ func (s *Select) AndId(cond bool, c string) *Select {
 }
 
 // OrParam Agrega una condición usando conector AND
-// c puede ser la condición como string o como un SqlBuilder
+// c puede ser la condición como string o como un SQLBuilder
 // op es el operador y param el parámetro de la condición
 func (s *Select) OrParam(c interface{}, op string, param interface{}) *Select {
 	s.filter.WriteString(" OR ")
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS ni  alias
-	opt := NewParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", op, "")
-	parse(s, s.filter, c, param, opt)
+	parse(s.filter, c, param, newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", op, ""))
 	return s
 }
 
+// Quote escapa a su argumento según el dialecto de la consulta
 func (s *Select) Quote(c interface{}) string {
-	return s.SqlBuilder.dialect.Quote(c)
+	return s.SQLBuilder.dialect.Quote(c)
 }
 
+// OpenEnclose Agrega un abre parentesis ( la consulta
 func (s *Select) OpenEnclose() string {
-	return s.SqlBuilder.dialect.OpenEnclose()
+	return s.SQLBuilder.dialect.OpenEnclose()
 }
 
+// CloseEnclose Agrega un cierre de parentesis ) la consulta
 func (s *Select) CloseEnclose() string {
-	return s.SqlBuilder.dialect.CloseEnclose()
+	return s.SQLBuilder.dialect.CloseEnclose()
 }
 
 func (s *Select) String() string {
 	s.WriteString("SELECT ")
 
 	if s.columns.Len() > 1 {
-		s.WriteString(s.columns.String()[0 : s.columns.Len()-1])
+		s.Write(s.columns.Bytes()[0 : s.columns.Len()-1])
 	}
-	s.WriteString(s.source.String())
-	s.WriteString(s.joins.String())
+	s.Write(s.source.Bytes())
+
+	s.Write(s.joins.Bytes())
 
 	if s.filter.Len() > 0 {
-		s.WriteString(s.filter.String())
+		s.Write(s.filter.Bytes())
 	}
 
 	if s.group.Len() > 0 {
-		s.WriteString(s.group.String())
+		s.Write(s.group.Bytes())
 	}
 
 	if s.having.Len() > 0 {
-		s.WriteString(s.having.String())
+		s.Write(s.having.Bytes())
 	}
 
 	if s.order.Len() > 0 {
-		s.WriteString(s.order.String())
+		s.Write(s.order.Bytes())
 	}
 
 	if s.limit > -1 {
@@ -468,15 +427,17 @@ func (s *Select) String() string {
 		s.WriteString(fmt.Sprintf(" OFFSET %v ", s.offset))
 	}
 
-	return s.Builder.String()
+	return *(*string)(unsafe.Pointer(&s.Buffer))
 }
 
+// Build construye la consulta devolviendo una tupla conteniendola en un string y los parámetros
+// registrados para su uso
 func (s *Select) Build() (string, []interface{}) {
 	return s.String(), s.Params()
 }
 
 // parse parsea elementos comunes de la consulta
-func parse(master Builder, subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) Builder {
+func parse(subject *SQLBuilder, circumstance interface{}, parameter interface{}, opt *parsingOptions) *SQLBuilder {
 
 	openHook(subject, circumstance, parameter, opt)
 
@@ -485,17 +446,19 @@ func parse(master Builder, subject Builder, circumstance interface{}, parameter 
 		return subject
 	case string:
 		parseString(subject, circumstance, parameter, opt)
-	case Builder:
-		parseBuilder(master, subject, circumstance, parameter, opt)
+	case *SQLBuilder:
+		parseBuilder(subject, circumstance, parameter, opt)
+	case *Select:
+		parseSelect(subject, circumstance, parameter, opt)
 	}
 
-	closeHook(master, subject, circumstance, parameter, opt)
+	closeHook(subject, circumstance, parameter, opt)
 
 	return subject
 }
 
 // parseString parses a circumstance as string
-func parseString(subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
+func parseString(subject *SQLBuilder, circumstance interface{}, parameter interface{}, opt *parsingOptions) {
 	sc := circumstance.(string)
 
 	// if Quote try to escape builder result with backticks
@@ -506,9 +469,9 @@ func parseString(subject Builder, circumstance interface{}, parameter interface{
 	_, _ = subject.WriteString(sc)
 }
 
-// parseBuilder parses a circumstance as Builder
-func parseBuilder(master Builder, subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
-	b := circumstance.(Builder)
+// parseBuilder parses a circumstance as  *SQLBuilder
+func parseBuilder(subject *SQLBuilder, circumstance interface{}, parameter interface{}, opt *parsingOptions) {
+	b := circumstance.(*SQLBuilder)
 
 	if opt.Enclose == EncloseOnlyBuilders {
 		_, _ = subject.WriteString(subject.Dialect().OpenEnclose())
@@ -522,30 +485,49 @@ func parseBuilder(master Builder, subject Builder, circumstance interface{}, par
 			),
 		)
 	} else {
-		_, _ = subject.WriteString(b.String())
+		_, _ = subject.Write(b.Bytes())
 	}
 
 	if opt.Enclose == EncloseOnlyBuilders {
 		_, _ = subject.WriteString(subject.Dialect().CloseEnclose())
 	}
 
-	smt, ok := circumstance.(*Select)
+	subject.AddParam(b.Params()...)
 
-	if ok {
-		subject.AddParam(smt.Params()...)
-	} else {
-		subject.AddParam(b.Params()...)
-	}
 	// // carga los parámetros de la query en los params de master, normalmente *Select
 	// master.AddParam(b.Params()...)
 	// // después de cargarlos, resetee los paràmetros de la circunstancia, para evitar memory leaks.
 	// b.ResetParams()
 	// b.Reset()
+}
 
+func parseSelect(subject *SQLBuilder, circumstance interface{}, parameter interface{}, opt *parsingOptions) {
+	smt := circumstance.(*Select)
+
+	if opt.Enclose == EncloseOnlyBuilders {
+		_, _ = subject.WriteString(subject.Dialect().OpenEnclose())
+	}
+
+	// if Quote try to escape builder result wit backticks
+	if opt.Quote {
+		_, _ = subject.WriteString(
+			subject.Dialect().Quote(
+				*(*string)(unsafe.Pointer(&smt.Buffer)),
+			),
+		)
+	} else {
+		_, _ = subject.WriteString(smt.String())
+	}
+
+	if opt.Enclose == EncloseOnlyBuilders {
+		_, _ = subject.WriteString(subject.Dialect().CloseEnclose())
+	}
+
+	subject.AddParam(smt.Params()...)
 }
 
 // openHook concentra el proceso antes del parseo
-func openHook(subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
+func openHook(subject *SQLBuilder, circumstance interface{}, parameter interface{}, opt *parsingOptions) {
 	// Este hack permite rodear de parentesis solo a circunstancias que sean Builders
 	if opt.Enclose == Enclose {
 		_, _ = subject.WriteString(subject.Dialect().OpenEnclose())
@@ -553,7 +535,7 @@ func openHook(subject Builder, circumstance interface{}, parameter interface{}, 
 }
 
 // closeHook concentra el proceso después del parseo
-func closeHook(master Builder, subject Builder, circumstance interface{}, parameter interface{}, opt parsingOptions) {
+func closeHook(subject *SQLBuilder, circumstance interface{}, parameter interface{}, opt *parsingOptions) {
 	if opt.Enclose == Enclose {
 		_, _ = subject.WriteString(subject.Dialect().CloseEnclose())
 	}

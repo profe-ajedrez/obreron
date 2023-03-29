@@ -211,18 +211,22 @@ func testJoin(t testing.TB) string {
 ```
 
 ```bash
-go test -benchmem -run=^$ -bench ^BenchmarkSlBuilder$ -count=5 -benchtime=5s  
 goos: linux
 goarch: amd64
 pkg: github.com/profe-ajedrez/obreron
 cpu: Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz
-BenchmarkSlBuilder-16             744958             10261 ns/op           13816 B/op        122 allocs/op
-BenchmarkSlBuilder-16             712387              9246 ns/op           13817 B/op        122 allocs/op
-BenchmarkSlBuilder-16             641104              8842 ns/op           13817 B/op        122 allocs/op
-BenchmarkSlBuilder-16             695001              9042 ns/op           13817 B/op        122 allocs/op
-BenchmarkSlBuilder-16             742594              9070 ns/op           13816 B/op        122 allocs/op
+BenchmarkSlBuilder-3     1432620              6699 ns/op           14354 B/op        104 allocs/op
+BenchmarkSlBuilder-3     1424514              6694 ns/op           14354 B/op        104 allocs/op
+BenchmarkSlBuilder-3     1368060              6738 ns/op           14354 B/op        104 allocs/op
+BenchmarkSlBuilder-3     1406500              6997 ns/op           14354 B/op        104 allocs/op
+BenchmarkSlBuilder-3     1336514              7647 ns/op           14354 B/op        104 allocs/op
+BenchmarkSlBuilder-6     1288227              7061 ns/op           14356 B/op        104 allocs/op
+BenchmarkSlBuilder-6     1354748              7179 ns/op           14356 B/op        104 allocs/op
+BenchmarkSlBuilder-6     1265295              7229 ns/op           14356 B/op        104 allocs/op
+BenchmarkSlBuilder-6     1355659              7274 ns/op           14356 B/op        104 allocs/op
+BenchmarkSlBuilder-6     1297155              7079 ns/op           14356 B/op        104 allocs/op
 PASS
-ok      github.com/profe-ajedrez/obreron        33.357s
+ok      github.com/profe-ajedrez/obreron        167.208s
 ```
 
 
