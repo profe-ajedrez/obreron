@@ -119,6 +119,8 @@ type Select struct {
 
 	limit  int64
 	offset int64
+
+	q string
 }
 
 // NewMaryBuilder devuelve un nuevo sql builder listo para trabajar
@@ -138,6 +140,27 @@ func NewMaryBuilder() *Select {
 		offset:     -1,
 	}
 	return &s
+}
+
+func (s *Select) Reset() {
+	s.columns.Reset()
+	s.joins.Reset()
+	s.filter.Reset()
+	s.order.Reset()
+	s.source.Reset()
+	s.group.Reset()
+	s.having.Reset()
+	s.SQLBuilder.Reset()
+	s.columns.Reset()
+	s.joins.ResetParams()
+	s.filter.ResetParams()
+	s.order.ResetParams()
+	s.source.ResetParams()
+	s.group.ResetParams()
+	s.having.ResetParams()
+	s.SQLBuilder.ResetParams()
+	s.limit = -1
+	s.offset = -1
 }
 
 // Params devuelve los paramétros registrados para los componentes de la consulta
@@ -195,18 +218,21 @@ func (s *Select) Params() []interface{} {
 
 // Limit establece el limite de la consulta. Si este valor es -1 no se agregara la clausula OFFSET a la query construida
 func (s *Select) Limit(l int64) *Select {
+	s.q = ""
 	s.limit = l
 	return s
 }
 
 // Offset establece el offset de la consulta. Si este valor es -1 no se agregara la clausula OFFSET a la query construida
 func (s *Select) Offset(o int64) *Select {
+	s.q = ""
 	s.offset = o
 	return s
 }
 
 // Select define consultas para la consulta. Cada ve que se llama resetea el buffer de construción
 func (s *Select) Select(cs ...interface{}) *Select {
+	s.q = ""
 	s.columns.Reset()
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS
 	opt := newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", "", "")
@@ -221,6 +247,7 @@ func (s *Select) Select(cs ...interface{}) *Select {
 
 // AddColumn agrega una columna con su alias. la columna c puede ser string u otro SQLBuilder. Puede omitir el alias pasando un string vacio
 func (s *Select) AddColumn(c interface{}, a string) *Select {
+	s.q = ""
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS
 	parse(s.columns, c, nil, newParsingOpts(EncloseOnlyBuilders, NoQuote, UseAs, a, "", ""))
 	s.columns.WriteByte(44)
@@ -237,6 +264,7 @@ func (s *Select) AddColumnIf(cond bool, c interface{}, a string) *Select {
 
 // From define el origen para obtener los datos de la consulta. Puede ser un string u otro sql builder
 func (s *Select) From(source interface{}, a string) *Select {
+	s.q = ""
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y usar clausula AS solo si se definio un alias
 	s.source.WriteString(" FROM ")
 	parse(s.source, source, nil, newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, a, "", ""))
@@ -299,6 +327,7 @@ func (s *Select) LeftIf(cond bool, c interface{}, a string, on string) *Select {
 
 // join es un método helper privado que ayuda a la construcción de joines
 func (s *Select) join(j string, c interface{}, a string, on string) *Select {
+	s.q = ""
 	s.joins.WriteString(j)
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS usando alias solo si se definio, pasando el on
 	parse(s.joins, c, "", newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, a, "", on))
@@ -307,24 +336,28 @@ func (s *Select) join(j string, c interface{}, a string, on string) *Select {
 
 // GroupBy agrega la clausula GROUP BY al Sql Builder
 func (s *Select) GroupBy(c string) *Select {
+	s.q = ""
 	s.group.WriteString(fmt.Sprintf(" GROUP BY %v ", c))
 	return s
 }
 
 // Having agrega la clausula HAVING al Sql Builder
 func (s *Select) Having(c string) *Select {
+	s.q = ""
 	s.group.WriteString(fmt.Sprintf(" HAVING %v ", c))
 	return s
 }
 
 // OrderBy agrega la clausula ORDER BY al Sql Builder
 func (s *Select) OrderBy(c string) *Select {
+	s.q = ""
 	s.order.WriteString(fmt.Sprintf(" ORDER BY %v ", c))
 	return s
 }
 
 // Where inicializa la clausula where
 func (s *Select) Where() *Select {
+	s.q = ""
 	s.filter.Reset()
 
 	s.filter.WriteString(" WHERE 1=1 ")
@@ -335,6 +368,7 @@ func (s *Select) Where() *Select {
 // c puede ser la condición como string o como un SQLBuilder
 // op es el operador y param el parámetro de la condición
 func (s *Select) AndParam(c interface{}, op string, param interface{}) *Select {
+	s.q = ""
 	s.filter.WriteString(" AND ")
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS ni  alias
 	parse(s.filter, c, param, newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", op, ""))
@@ -372,6 +406,7 @@ func (s *Select) AndIf(cond bool, c string) *Select {
 // c puede ser la condición como string o como un SQLBuilder
 // op es el operador y param el parámetro de la condición
 func (s *Select) OrParam(c interface{}, op string, param interface{}) *Select {
+	s.q = ""
 	s.filter.WriteString(" OR ")
 	// Para este parseo cerrar entre parenstesis solo a los builders, no escapar y no usar clausula AS ni  alias
 	parse(s.filter, c, param, newParsingOpts(EncloseOnlyBuilders, NoQuote, NoUseAs, "", op, ""))
@@ -394,6 +429,10 @@ func (s *Select) CloseEnclose() string {
 }
 
 func (s *Select) String() string {
+	if s.q != "" {
+		return s.q
+	}
+
 	s.WriteString("SELECT ")
 
 	if s.columns.Len() > 1 {
@@ -427,7 +466,9 @@ func (s *Select) String() string {
 		s.WriteString(fmt.Sprintf(" OFFSET %v ", s.offset))
 	}
 
-	return *(*string)(unsafe.Pointer(&s.Buffer))
+	s.q = *(*string)(unsafe.Pointer(&s.Buffer))
+
+	return s.q
 }
 
 // Build construye la consulta devolviendo una tupla conteniendola en un string y los parámetros

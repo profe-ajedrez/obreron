@@ -182,7 +182,9 @@ func TestJoin(t *testing.T) {
 }
 
 func TestHeavySlBuilder(t *testing.T) {
-	q, p := heavyQueryBuild(t)
+	bl := NewMaryBuilder()
+
+	q, p := heavyQueryBuild(t, bl)
 	t.Log(q)
 	t.Log(p)
 
@@ -216,14 +218,15 @@ func TestHeavySlBuilder(t *testing.T) {
 
 func BenchmarkSlBuilder(b *testing.B) {
 	b.ResetTimer()
+	bl := NewMaryBuilder()
 	for i := 0; i <= b.N; i++ {
-		heavyQueryBuild(b)
+		heavyQueryBuild(b, bl)
+		bl.Reset()
 	}
 
 }
 
-func heavyQueryBuild(b testing.TB) (string, []interface{}) {
-	bl := NewMaryBuilder()
+func heavyQueryBuild(b testing.TB, bl *Select) (string, []interface{}) {
 
 	filterByClassification := true
 
