@@ -90,6 +90,19 @@ func (sb *SQLBuilder) AddParam(p ...interface{}) {
 	}
 }
 
+// AddParam agrega un paràmetro al SQLBuilder si cond es verdadera
+func (sb *SQLBuilder) AddParamIf(cond bool, p ...interface{}) {
+	if cond {
+		if len(p) > 0 {
+			if len(sb.params) == 0 {
+				sb.params = make([]interface{}, 0, len(p))
+			}
+			sb.params = append(sb.params, p...)
+		}
+    }
+}
+
+
 // Params devuelve el slice de parámetros del SQLBuilder
 func (sb *SQLBuilder) Params() []interface{} {
 	return sb.params
