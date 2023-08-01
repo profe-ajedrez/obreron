@@ -6,9 +6,9 @@ Sql Builder escrito en Go.
 
 ## Dialectos soportados
 
-- [x] Mysql  
-- [ ] Postgresql  
-  
+- [x] Mysql
+- [ ] Postgresql
+
 
 ---
 
@@ -32,7 +32,7 @@ $ go get github.com/profe-ajedrez/obreron
 ## Uso
 
 
-Con obreron es fácil construir consultas. Por ejemplo el siguiente código 
+Con obreron es fácil construir consultas. Por ejemplo el siguiente código.
 
 
 ```go
@@ -46,10 +46,10 @@ q := b.Select(
 ).From("users", "u").String()
 ```
 
-produce la siguiente consulta en la variable `q`: 
+produce la siguiente consulta en la variable `q`:
 
-```
-SELECT id,name,mail, `columna con espacios en el nombre` FROM users u 
+```sql
+SELECT id,name,mail, `columna con espacios en el nombre` FROM users u
 ```
 
 Pero para eso no necesitamos un Sql Builder. Estos brillan cuando debemos construir consultas dinámicas, como para el caso de armar filtros.
@@ -72,32 +72,31 @@ b := NewMaryBuilder()
 		limit:       25, // limite para la consulta
 	}
 
-    // Los campos user_id, user_mail y user_type serán agregados a la consulta
+        // Los campos user_id, user_mail y user_type serán agregados a la consulta
 	b.Select(
 		"user_id", "user_mail", "user_type",
 	).From("users", "u").Where().Limit(options.limit)
 
-    // Los campos user_name, user_fullname y user_address se agregaran a la consulta solo si la condición pasada es verdadera
+        // Los campos user_name, user_fullname y user_address se agregaran a la consulta solo si la condición pasada es verdadera
 	b.AddColumnIf(options.useName, "user_name", "").AddColumnIf(options.useFullName, "user_fullname", "")
 	b.AddColumnIf(options.useAddress, "user_address", "")
 
-    // Agregamos una condición en la que decimos que agregue el filtro por user_status si a opción correspondiente es > -1
+        // Agregamos una condición en la que decimos que agregue el filtro por user_status si a opción correspondiente es > -1
 	b.AndParamIf(options.status > -1, "user_status", "=", options.status)
 
-    // tras construir la consulta, q contendrá la query y p los parámetros registrados para su uso
+        // tras construir la consulta, q contendrá la query y p los parámetros registrados para su uso
 	q, p := b.Build()
-
 ```
 
-El ejemplo anterior construye en `q` la consulta 
+El ejemplo anterior construye en `q` la consulta
 
 ```sql
-SELECT user_id,user_mail,user_type,user_name,user_fullname FROM users u  WHERE 1=1  AND user_status = ? LIMIT 25 
+SELECT user_id,user_mail,user_type,user_name,user_fullname FROM users u  WHERE 1=1  AND user_status = ? LIMIT 25
 ```
 
 y deja en `p`  un `[]interface {}(int8) 0`
 
-  
+
 ## Benchmarks
 
 Presentamos el siguiente benchmark
@@ -132,7 +131,7 @@ func heavyQueryBuild(b testing.TB) (string, []interface{}) {
 		"CASE WHEN vdt.estado = 0 THEN IFNULL(vdt.num_doc, '') ELSE '' END AS num_doc",
 		"CASE WHEN vdt.estado = 0 THEN IFNULL(td.nombre_tipo, '') ELSE 'nulo' END AS nombre_tipo",
 		`CASE WHEN vdt.estado = 0 THEN IFNULL(
-		vdt.id_documento, 
+		vdt.id_documento,
 		0
 		) ELSE -99 END AS id_documento`,
 		"IFNULL(dd.ids_detalle_ingreso, 0) AS id_detalle_ingreso",
@@ -242,7 +241,7 @@ ok      github.com/profe-ajedrez/obreron        167.208s
 ### goreportcard-cli
 
 ```bash
-~/go/bin/goreportcard-cli   
+~/go/bin/goreportcard-cli
 Grade .......... A+ 100.0%
 Files .................. 4
 Issues ................. 3
@@ -253,4 +252,3 @@ ineffassign ......... 100%
 license ............. 100%
 misspell ............. 25%
 ```
-
