@@ -62,6 +62,14 @@ $ go get github.com/profe-ajedrez/obreron/v2
 
 ## Use
 
+Import package
+
+```go
+import (
+	obreron "github.com/profe-ajedrez/obreron/v2"
+)
+```
+
 ### Select
 
 * Simple select
