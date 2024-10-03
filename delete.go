@@ -71,7 +71,7 @@ func (dst *DeleteStament) In(value, expr string, p ...any) *DeleteStament {
 }
 
 func (dst *DeleteStament) Close() {
-	Close(dst.stament)
+	closeStament(dst.stament)
 }
 
 func (dst *DeleteStament) OrderBy(expr string, p ...any) *DeleteStament {
@@ -79,8 +79,8 @@ func (dst *DeleteStament) OrderBy(expr string, p ...any) *DeleteStament {
 	return dst
 }
 
-func (dst *DeleteStament) Limit(limit string, p ...any) *DeleteStament {
-	dst.add(limitS, "LIMIT", limit, p...)
+func (dst *DeleteStament) Limit(limit int) *DeleteStament {
+	dst.add(limitS, "LIMIT", "?", limit)
 	return dst
 }
 

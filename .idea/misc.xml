@@ -4,6 +4,11 @@
     <option name="excludedDescriptors">
       <set>
         <PrintfFuncDescriptorState>
+          <option name="importPath" value="github.com/profe-ajedrez/obreron" />
+          <option name="name" value="AndIf" />
+          <option name="receiver" value="*SelectStm" />
+        </PrintfFuncDescriptorState>
+        <PrintfFuncDescriptorState>
           <option name="importPath" value="obreron" />
           <option name="name" value="ColIf" />
           <option name="receiver" value="*SelectStament" />
@@ -12,6 +17,11 @@
           <option name="importPath" value="obreron" />
           <option name="name" value="AndIf" />
           <option name="receiver" value="*SelectStament" />
+        </PrintfFuncDescriptorState>
+        <PrintfFuncDescriptorState>
+          <option name="importPath" value="github.com/profe-ajedrez/obreron" />
+          <option name="name" value="ColIf" />
+          <option name="receiver" value="*SelectStm" />
         </PrintfFuncDescriptorState>
       </set>
     </option>

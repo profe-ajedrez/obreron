@@ -146,17 +146,17 @@ func BenchmarkInsert(b *testing.B) {
 }
 
 func selectTestCases() (cases []struct {
+	tc             *SelectStm
 	name           string
 	expected       string
 	expectedParams []any
-	tc             *SelectStament
 }) {
 
 	cases = []struct {
+		tc             *SelectStm
 		name           string
 		expected       string
 		expectedParams []any
-		tc             *SelectStament
 	}{
 		/* SELECT TESTS */
 		{
@@ -267,16 +267,16 @@ func selectTestCases() (cases []struct {
 }
 
 func deleteTestCases() []struct {
+	tc             *DeleteStament
 	name           string
 	expected       string
 	expectedParams []any
-	tc             *DeleteStament
 } {
 	return []struct {
+		tc             *DeleteStament
 		name           string
 		expected       string
 		expectedParams []any
-		tc             *DeleteStament
 	}{
 		/* DELETE TESTS */
 		{
@@ -308,17 +308,17 @@ func deleteTestCases() []struct {
 				Where("client_id = 100").
 				And("estado_cliente = 0").
 				Y().In("regime_cliente", "'G01','G02', ?", "'G03'").
-				Limit("?", 100),
+				Limit(100),
 		},
 		{
 			name:           "del where conditions limit -- shuffled",
 			expected:       "DELETE FROM client WHERE client_id = 100 AND estado_cliente = 0 AND regime_cliente IN ('G01','G02', ?) LIMIT ?",
-			expectedParams: []any{"'G03'", 100},
+			expectedParams: []any{"G03", 100},
 			tc: Delete().From("client").
-				Limit("?", 100).
+				Limit(100).
 				Where("client_id = 100").
 				And("estado_cliente = 0").
-				Y().In("regime_cliente", "'G01','G02', ?", "'G03'"),
+				Y().In("regime_cliente", "'G01','G02', ?", "G03"),
 		},
 		{
 			name:           "simple del where quick",
@@ -340,24 +340,24 @@ func deleteTestCases() []struct {
 		},
 		{
 			name:           "simple del where order by limit",
-			expected:       "DELETE FROM client WHERE client_id = 100 ORDER BY ciudad LIMIT 10",
-			expectedParams: nil,
-			tc:             Delete().From("client").Where("client_id = 100").OrderBy("ciudad").Limit("10"),
+			expected:       "DELETE FROM client WHERE client_id = 100 ORDER BY ciudad LIMIT ?",
+			expectedParams: []any{10},
+			tc:             Delete().From("client").Where("client_id = 100").OrderBy("ciudad").Limit(10),
 		},
 	}
 }
 
 func updateTestCases() (tcs []struct {
+	tc             *UpdateStament
 	name           string
 	expected       string
 	expectedParams []any
-	tc             *UpdateStament
 }) {
 	tcs = append(tcs, []struct {
+		tc             *UpdateStament
 		name           string
 		expected       string
 		expectedParams []any
-		tc             *UpdateStament
 	}{
 		{
 			name:           "update simple",
@@ -375,13 +375,13 @@ func updateTestCases() (tcs []struct {
 			name:           "update where order limit",
 			expected:       "UPDATE client SET status = 0 WHERE status = ? ORDER BY ciudad LIMIT ?",
 			expectedParams: []any{1, 10},
-			tc:             Update("client").Set("status = 0").Where("status = ?", 1).OrderBy("ciudad").Limit("?", 10),
+			tc:             Update("client").Set("status = 0").Where("status = ?", 1).OrderBy("ciudad").Limit(10),
 		},
 		{
 			name:           "update where and order limit",
 			expected:       "UPDATE client SET status = 0 WHERE status = ? AND country = ? ORDER BY ciudad LIMIT ?",
 			expectedParams: []any{1, "'CL'", 10},
-			tc:             Update("client").Set("status = 0").Where("status = ?", 1).And("country = ?", "'CL'").OrderBy("ciudad").Limit("?", 10),
+			tc:             Update("client").Set("status = 0").Where("status = ?", 1).And("country = ?", "'CL'").OrderBy("ciudad").Limit(10),
 		},
 		{
 			name:           "update select",
@@ -408,16 +408,16 @@ func updateTestCases() (tcs []struct {
 }
 
 func insertTestCases() (tcs []struct {
+	tc             *InsertStament
 	name           string
 	expected       string
 	expectedParams []any
-	tc             *InsertStament
 }) {
 	tcs = append(tcs, []struct {
+		tc             *InsertStament
 		name           string
 		expected       string
 		expectedParams []any
-		tc             *InsertStament
 	}{
 		{
 			name:           "simple insert",

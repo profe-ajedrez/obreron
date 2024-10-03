@@ -13,19 +13,19 @@ func Update(table string) *UpdateStament {
 	return d
 }
 
-func (up *UpdateStament) ColSelect(col *SelectStament, alias string) *UpdateStament {
+func (up *UpdateStament) ColSelect(col *SelectStm, alias string) *UpdateStament {
 
 	up.Clause(",(", "")
 
 	q, p := col.Build()
 	up.Clause(q, "", p...)
-	up.closePar()
+	up.ClosePar()
 	up.Clause(alias, "")
 
 	return up
 }
 
-func (up *UpdateStament) ColSelectIf(cond bool, col *SelectStament, alias string) *UpdateStament {
+func (up *UpdateStament) ColSelectIf(cond bool, col *SelectStm, alias string) *UpdateStament {
 	if cond {
 		up.ColSelect(col, alias)
 	}
@@ -105,7 +105,7 @@ func (up *UpdateStament) In(value, expr string, p ...any) *UpdateStament {
 }
 
 func (up *UpdateStament) Close() {
-	Close(up.stament)
+	closeStament(up.stament)
 }
 
 func (up *UpdateStament) OrderBy(expr string, p ...any) *UpdateStament {
@@ -113,8 +113,8 @@ func (up *UpdateStament) OrderBy(expr string, p ...any) *UpdateStament {
 	return up
 }
 
-func (up *UpdateStament) Limit(limit string, p ...any) *UpdateStament {
-	up.add(limitS, "LIMIT", limit, p...)
+func (up *UpdateStament) Limit(limit int) *UpdateStament {
+	up.add(limitS, "LIMIT", "?", limit)
 	return up
 }
 

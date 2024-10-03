@@ -55,7 +55,7 @@ func (in *InsertStament) ColIf(cond bool, col string, p ...any) *InsertStament {
 	return in
 }
 
-func (in *InsertStament) ColSelect(col string, expr *SelectStament) *InsertStament {
+func (in *InsertStament) ColSelect(col string, expr *SelectStm) *InsertStament {
 	if !in.firstCol {
 		in.Clause(",", "")
 		in.add(colsS, col, "")
@@ -71,7 +71,7 @@ func (in *InsertStament) ColSelect(col string, expr *SelectStament) *InsertStame
 	return in
 }
 
-func (in *InsertStament) ColSelectIf(cond bool, col string, expr *SelectStament) *InsertStament {
+func (in *InsertStament) ColSelectIf(cond bool, col string, expr *SelectStm) *InsertStament {
 	if cond {
 		return in.ColSelect(col, expr)
 	}
@@ -191,5 +191,5 @@ func (in *InsertStament) Build() (string, []any) {
 }
 
 func (in *InsertStament) Close() {
-	Close(in.stament)
+	closeStament(in.stament)
 }

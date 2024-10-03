@@ -2,7 +2,6 @@ package obreron
 
 import (
 	"bytes"
-	_ "github.com/valyala/bytebufferpool"
 	"slices"
 	"sync"
 	"unsafe"
@@ -14,7 +13,7 @@ var pool = &sync.Pool{
 	},
 }
 
-func Close(st *stament) {
+func closeStament(st *stament) {
 	for i := range st.p {
 		st.p[i] = nil
 	}
@@ -31,9 +30,9 @@ type segment struct {
 }
 
 type stament struct {
-	buff       bytes.Buffer
 	s          []segment
 	p          []any
+	buff       bytes.Buffer
 	lastPos    int
 	whereAdded bool
 	grouped    bool
@@ -44,7 +43,7 @@ func (st *stament) clause(clause, expr string, p ...any) {
 	st.add(st.lastPos, clause, expr, p...)
 }
 
-func (st *stament) openPar() {
+func (st *stament) OpenPar() {
 	st.add(st.lastPos, "(", "")
 }
 
@@ -58,7 +57,7 @@ func (st *stament) where(cond string, p ...any) {
 
 }
 
-func (st *stament) closePar() {
+func (st *stament) ClosePar() {
 	st.add(st.lastPos, ")", "")
 }
 
@@ -157,23 +156,7 @@ func (st *stament) add(pos int, clause, expr string, p ...any) {
 	}
 }
 
-func insertAt(dest, src []interface{}, index int) []interface{} {
-	srcLen := len(src)
-	if srcLen > 0 {
-		oldLen := len(dest)
-		dest = append(dest, src...)
-		if index < oldLen {
-			copy(dest[index+srcLen:], dest[index:])
-			copy(dest[index:], src)
-		}
-	}
-
-	return dest
-}
-
 const (
-	maxSegments = 11
-
 	selectS = 0
 	deleteS = 0
 	updateS = 0
