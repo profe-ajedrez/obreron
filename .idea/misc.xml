@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="excludedPrintfFunctions.xml">
+    <option name="excludedDescriptors">
+      <set>
+        <PrintfFuncDescriptorState>
+          <option name="importPath" value="obreron" />
+          <option name="name" value="ColIf" />
+          <option name="receiver" value="*SelectStament" />
+        </PrintfFuncDescriptorState>
+        <PrintfFuncDescriptorState>
+          <option name="importPath" value="obreron" />
+          <option name="name" value="AndIf" />
+          <option name="receiver" value="*SelectStament" />
+        </PrintfFuncDescriptorState>
+      </set>
+    </option>
+    <option name="excludedNames">
+      <set>
+        <option value="AndIf" />
+        <option value="ColIf" />
+      </set>
+    </option>
+  </component>
+</project>
