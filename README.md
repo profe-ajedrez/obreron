@@ -54,7 +54,7 @@ BenchmarkInsert/simple_insert_params_select-8                                   
 
 ## Instalation
 
-Use `go get`
+Use `go get` to install v2
 
 ```bash
 $ go get github.com/profe-ajedrez/obreron/v2
@@ -62,13 +62,21 @@ $ go get github.com/profe-ajedrez/obreron/v2
 
 ## Use
 
+Import package
+
+```go
+import (
+	obreron "github.com/profe-ajedrez/obreron/v2"
+)
+```
+
 ### Select
 
 * Simple select
 
 ```go
 // Produces SELECT a1, a2, a3 FROM client
-query, _ := Select().Col("a1, a2, a3").From("client").Build()
+query, _ := obreron.Select().Col("a1, a2, a3").From("client").Build()
 r, error := db.Query(query)
 ```
 
@@ -77,7 +85,7 @@ r, error := db.Query(query)
 ```go
 // Produces SELECT a1, a2, ? AS diez, colIf1, colIf2, ? AS zero, a3, ? AS cien FROM client c JOIN addresses a ON a.id_cliente = a.id_cliente JOIN phones p ON p.id_cliente = c.id_cliente JOIN mailes m ON m.id_cliente = m.id_cliente AND c.estado_cliente = ? LEFT JOIN left_joined lj ON lj.a1 = c.a1 WHERE a1 = ? AND a2 = ? AND a3 = 10 AND a16 = ?
 // with params = []any{10, 0, 100, 0, "'last name'", 1000.54, 75}
-query, params := Select().
+query, params := obreron.Select().
     Where("a1 = ?", "'last name'").
     Col("a1, a2, ? AS diez", 10).
     Col(`colIf1, colIf2, ? AS zero`, 0).
@@ -101,10 +109,10 @@ Note that in this example we purposely shuffled the order of the clauses and yet
 
 Sometimes we need to check for a condition to build dynamic sql
 
-This example adds the column `name` to the query only if the variable `shouldAddName` is true. 
+This example adds the column `name` to the query only if the variable `shouldAddName` is true.
 
 ```go
-query, _ := Select().
+query, _ := obreron.Select().
 	Col("a1, a2, a3").
 	ColIf(shouldAddName, "name")
 	From("client").
@@ -117,7 +125,7 @@ query, _ := Select().
 This also can be applied to joins.
 
 ```go
-query, _ := Select().
+query, _ := obreron.Select().
 	Col("*").
 	From("client c").
 	Join("addresses a").On("a.client_id = c.client_id").
@@ -131,7 +139,7 @@ query, _ := Select().
 And boolean connectors
 
 ```go
-query, _ := Select().
+query, _ := obreron.Select().
 	Col("*").
 	From("client c").	
 	Where("c.status = 0").AndIf(shouldFilterByCountry, "country = 'CL'").
@@ -146,7 +154,7 @@ query, _ := Select().
 You can add params to almost any clause
 
 ```go
-query, params := Select().
+query, params := obreron.Select().
 	Col("name, mail, ? AS max_credit", 1000000).
 	From("client c").	
 	Where("c.status = 0").And("country = ?", "CL").
@@ -159,26 +167,26 @@ query, params := Select().
 * Simple delete
 
 ```go
-query, _ := Delete().From("client").Build()
+query, _ := obreron.Delete().From("client").Build()
 // Produces "DELETE FROM client"
 ```
 
 * Simple del where
 
 ```go
-query, _ := Delete().From("client").Where("client_id = 100").Build()
+query, _ := obreron.Delete().From("client").Where("client_id = 100").Build()
 // Produces "DELETE FROM client WHERE client_id = 100"
 ```
 
 * Like with Select you can use parameters and conditionals with Delete
 
 ```go
-query, params := Delete().From("client").Where("client_id = ?", 100).Build()
+query, params := obreron.Delete().From("client").Where("client_id = ?", 100).Build()
 // Produces "DELETE FROM client WHERE client_id = ?"
 ```
 
 ```go
-query, params := Delete().From("client").Where("1=1").AndIf(filterByClient, "client_id = ?", 100).Build()
+query, params := obreron.Delete().From("client").Where("1=1").AndIf(filterByClient, "client_id = ?", 100).Build()
 // Produces "DELETE FROM client WHERE 1=1" when filterByClient is false
 // Produces "DELETE FROM client WHERE 1=1 AND client_id = ?" when filterByClient is true
 ```
@@ -189,14 +197,14 @@ query, params := Delete().From("client").Where("1=1").AndIf(filterByClient, "cli
 * Simple update
 
 ```go
-query, _ := Update("client").Set("status = 0").Build()
+query, _ := obreron.Update("client").Set("status = 0").Build()
 // Produces UPDATE client SET status = 0
 ```
 
 * Update/where/order/limit
 
 ```go
-query, _ := Update("client").
+query, _ := obreron.Update("client").
 	Set("status = 0").
 	Where("status = ?", 1).
 	OrderBy("ciudad").
@@ -260,7 +268,7 @@ query, params := nsert().
 
 ## Other clauses
 
-You can add others clauses using the `Clause` method 
+You can add others clauses using the `Clause` method
 
 ```go
 query, params := Insert().Clause("IGNORE", "")
