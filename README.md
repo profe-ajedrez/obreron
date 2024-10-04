@@ -15,6 +15,8 @@ Because writing SQL in Go is boring.
 
 ## How fast is it?
 
+Benchmarks for the `Build` method.
+
 ```bash
 goos: linux
 goarch: amd64
