@@ -261,6 +261,24 @@ func selectTestCases() (cases []struct {
 				LeftJoin("left_joined lj").On("lj.a1 = c.a1").
 				From("client c"),
 		},
+		{
+			name:           "columns - where in",
+			expected:       "SELECT a1, a2, a3 FROM client WHERE status IN ( 0, 1, 2, 3)",
+			expectedParams: nil,
+			tc:             Select().Col("a1, a2, a3").From("client").Where("status").In("0, 1, 2, 3"),
+		},
+		{
+			name:           "columns - where in",
+			expected:       "SELECT a1, a2, a3 FROM client WHERE 1 = 1 AND status IN ( 0, 1, 2, 3)",
+			expectedParams: nil,
+			tc:             Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("status").In("0, 1, 2, 3"),
+		},
+		{
+			name:           "columns - where like",
+			expected:       "SELECT a1, a2, a3 FROM client WHERE 1 = 1 AND city LIKE '%ago%'",
+			expectedParams: nil,
+			tc:             Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("city").Like("'%ago%'"),
+		},
 	}
 
 	return cases

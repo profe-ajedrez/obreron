@@ -8,6 +8,8 @@ type SelectStm struct {
 
 // Select Returns a select stament
 //
+// # Example
+//
 // query, _ := Select().Col("a1, a2, a3").From("client").Build()
 // r, error := db.Query(q)
 func Select() *SelectStm {
@@ -24,6 +26,13 @@ func (st *SelectStm) Close() {
 	closeStament(st.stament)
 }
 
+// Col adds a column to the select stament.
+//
+// # Example
+//
+// s := Select()
+// s.Col("name, mail").Col("? AS max_credit", 1000000).
+// From("client")
 func (st *SelectStm) Col(expr string, p ...any) *SelectStm {
 	if !st.firstCol {
 		st.add(colsS, ",", expr, p...)
@@ -35,6 +44,15 @@ func (st *SelectStm) Col(expr string, p ...any) *SelectStm {
 	return st
 }
 
+// ColIf adds a column to the select stament only when `cond` parameter is true.
+//
+// # Example
+//
+// addMaxCredit := true
+//
+// s := Select()
+// s.Col("name, mail").ColIf(addMaxCredit, "? AS max_credit", 1000000).
+// From("client")
 func (st *SelectStm) ColIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		if !st.firstCol {
@@ -48,16 +66,49 @@ func (st *SelectStm) ColIf(cond bool, expr string, p ...any) *SelectStm {
 	return st
 }
 
+// From sets the source table for the select stament
+//
+// # Example
+//
+// s := Select()
+// s.Col("*").
+// From("client")
 func (st *SelectStm) From(source string) *SelectStm {
 	st.add(fromS, "FROM", source)
 	return st
 }
 
+// Join adds a relation to the query in the form of an inner join
+//
+// # Example
+//
+// s := Select().Col("*").From("client").
+// Join("addresses a ON a.client_id = c.client_id")
+//
+// # Also On clause can be used along with connectors and parameters
+//
+// s := Select().Col("*").From("client").
+// Join("addresses a").On("a.client_id = c.client_id").And("c.status = ?", 0)
 func (st *SelectStm) Join(expr string, p ...any) *SelectStm {
 	st.add(joinS, "JOIN", expr, p...)
 	return st
 }
 
+// JoinIf adds a relation to the query in the form of an inner join only when the cond parameter is true
+//
+// # Example
+//
+// addJoin := true
+// s := Select().Col("*").
+// From("client").
+// JoinIf(addJoin, "addresses a ON a.client_id = c.client_id")
+//
+// # Also OnIf clause can be used along with connectors and parameters
+//
+// s := Select().Col("*").
+// From("client").
+// JoinIf(aaddJoin, "addresses a").
+// OnIf(addJoin, "a.client_id = c.client_id").And("c.status = ?", 0)
 func (st *SelectStm) JoinIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.add(joinS, "JOIN", expr, p...)
@@ -65,11 +116,37 @@ func (st *SelectStm) JoinIf(cond bool, expr string, p ...any) *SelectStm {
 	return st
 }
 
+// LeftJoin adds a relation to the query in the form of a left join
+//
+// # Example
+//
+// s := Select().Col("*").From("client").
+// LeftJoin("addresses a ON a.client_id = c.client_id")
+//
+// # Also On clause can be used along with connectors and parameters
+//
+// s := Select().Col("*").From("client").
+// LeftJoin("addresses a").On("a.client_id = c.client_id").And("c.status = ?", 0)
 func (st *SelectStm) LeftJoin(expr string, p ...any) *SelectStm {
 	st.add(joinS, "LEFT JOIN", expr, p...)
 	return st
 }
 
+// LeftJoinIf adds a relation to the query in the form of a left join only when the cond parameter is true
+//
+// # Example
+//
+// addJoin := true
+// s := Select().Col("*").
+// From("client").
+// LeftJoinIf(addJoin, "addresses a ON a.client_id = c.client_id")
+//
+// # Also OnIf clause can be used along with connectors and parameters
+//
+// s := Select().Col("*").
+// From("client").
+// LeftJoinIf(aaddJoin, "addresses a").
+// OnIf(addJoin, "a.client_id = c.client_id").And("c.status = ?", 0)
 func (st *SelectStm) LeftJoinIf(cond bool, join string, p ...any) *SelectStm {
 	if cond {
 		st.add(joinS, "LEFT JOIN", join, p...)
@@ -113,17 +190,40 @@ func (st *SelectStm) OnIf(cond bool, expr string, p ...any) *SelectStm {
 	return st
 }
 
+// Where adds a condition to filter the query
+//
+// # Example
+//
+// s := Select().Col("*").From("client").
+// Where("status = ?", 1)
 func (st *SelectStm) Where(cond string, p ...any) *SelectStm {
 	st.where(cond, p...)
 
 	return st
 }
 
+// And adds a condition to the query connecting with an AND operator
+//
+// # Example
+//
+// s := Select().Col("*").From("client").
+// Where("status = ?", 1).And("country = ?", "CL")
+//
+// Also can be used in join and having clauses
 func (st *SelectStm) And(expr string, p ...any) *SelectStm {
 	st.clause("AND", expr, p...)
 	return st
 }
 
+// AndIf adds a condition to the query connecting with an AND operator only when cond parameter is true
+//
+// # Example
+//
+// filterByCountry = true
+// s := Select().Col("*").From("client").
+// Where("status = ?", 1).AndIf("country = ?", "CL")
+//
+// Also can be used in join and having clauses
 func (st *SelectStm) AndIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.clause("AND", expr, p...)
@@ -143,6 +243,13 @@ func (st *SelectStm) OrIf(cond bool, expr string, p ...any) *SelectStm {
 	return st
 }
 
+// Like adds a LIKE clause to the query after the las clause added
+//
+// # Example
+//
+// Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("city").Like("'%ago%'")
+//
+// Observe that if you use it like Select().Like(..., will produce "SELECT LIKE"
 func (st *SelectStm) Like(expr string, p ...any) *SelectStm {
 	st.clause("LIKE", expr, p...)
 	return st
