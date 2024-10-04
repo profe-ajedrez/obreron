@@ -54,7 +54,7 @@ BenchmarkInsert/simple_insert_params_select-8                                   
 
 ## Instalation
 
-Use `go get` to install v2
+Use `go get` to install [v2](https://github.com/profe-ajedrez/obreron/tree/v2)
 
 ```bash
 $ go get github.com/profe-ajedrez/obreron/v2
