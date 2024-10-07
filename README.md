@@ -283,3 +283,6 @@ query, params := Insert().Clause("IGNORE", "")
 
 The `Clause` method always will inject the clause after the last uses building command
 
+## TODO
+
+SQL parser. 
