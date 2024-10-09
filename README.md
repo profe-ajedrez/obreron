@@ -2,6 +2,7 @@
 
 Fast and cheap sql builder.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/profe-ajedrez/obreron/v2.svg)](https://pkg.go.dev/github.com/profe-ajedrez/obreron/v2)
 
 ## Supported Dialects
 
