@@ -113,9 +113,25 @@ func (in *InsertStament) Build() (string, []any) {
 		return 0
 	})
 
-	dest := make([]any, len(in.p))
-	first := 0
+	i := posClauses(in, &b, buf)
 
+	if in.withSelect {
+		b.WriteString(") ")
+	} else {
+		b.WriteString(") VALUES ( ")
+	}
+
+	posParams(i, in, &b, buf)
+
+	if !in.withSelect {
+		b.WriteString(" )")
+	}
+
+	ss := b.Bytes()
+	return *(*string)(unsafe.Pointer(&ss)), in.p
+}
+
+func posClauses(in *InsertStament, b *bytes.Buffer, buf []byte) int {
 	i := 0
 	for i < len(in.s) && in.s[i].sType != insP {
 		k := i
@@ -132,11 +148,6 @@ func (in *InsertStament) Build() (string, []any) {
 
 			b.Write(buf[in.s[k].start : in.s[k].start+in.s[k].length])
 
-			if in.s[k].pIndex > -1 {
-				copy(dest[first:], in.p[in.s[k].pIndex:in.s[k].pIndex+in.s[k].pCount])
-				first += in.s[k].pCount
-			}
-
 			k++
 			j++
 		}
@@ -148,47 +159,22 @@ func (in *InsertStament) Build() (string, []any) {
 		}
 		i++
 	}
+	return i
+}
 
-	if in.withSelect {
-		b.WriteString(") ")
-	} else {
-		b.WriteString(") VALUES ( ")
-	}
-
+func posParams(i int, in *InsertStament, b *bytes.Buffer, buf []byte) {
 	for i < len(in.s) {
 		k := i
-		j := 0
 
 		for k < len(in.s) && in.s[k].sType == in.s[i].sType {
-
-			//if j > 0 && j < len(in.s)-1 {
-			//	if in.s[i].sType != colsS &&  {
-			//		b.WriteString(" ")
-			//	}
-			//}
-
 			b.Write(buf[in.s[k].start : in.s[k].start+in.s[k].length])
-
-			//if in.s[k].pIndex > -1 {
-			//	copy(dest[first:], in.p[in.s[k].pIndex:in.s[k].pIndex+in.s[k].pCount])
-			//	first += in.s[k].pCount
-			//}
-
 			k++
-			j++
 		}
 
 		i = k - 1
 
 		i++
 	}
-
-	if !in.withSelect {
-		b.WriteString(" )")
-	}
-
-	ss := b.Bytes()
-	return *(*string)(unsafe.Pointer(&ss)), in.p
 }
 
 func (in *InsertStament) Close() {

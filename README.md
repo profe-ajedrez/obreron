@@ -15,51 +15,6 @@ Fast and cheap sql builder.
 
 Because writing SQL in Go is boring.
 
-## How fast is it?
-
-```bash
-goos: linux
-goarch: amd64
-pkg: github.com/profe-ajedrez/obreron/v2
-cpu: Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz
-BenchmarkSelect/columns_-_from-8                                                                        18056312               114.1 ns/op            22 B/op          0 allocs/op
-BenchmarkSelect/columns_-_from#01-8                                                                     23938047               129.7 ns/op            22 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_from-8                                                                 15589848               141.3 ns/op            18 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_from-8                                                22873436               135.7 ns/op            17 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from-8                                       17448961               185.9 ns/op            30 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where-8                               22747176               206.5 ns/op            25 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_Col_If_-_columns_params_-_Col_If_-_from_-_join_if_-where-8             19259132               142.5 ns/op            27 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#01-8                            17754853               131.1 ns/op            19 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#02-8                            19057185               139.1 ns/op            28 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where_shuffled-8                      20544037               120.0 ns/op            26 B/op          0 allocs/op
-BenchmarkSelect/complex_query_shuffled-8                                                                19129396               125.9 ns/op            21 B/op          0 allocs/op
-BenchmarkSelect/complex_query_badly_shuffled-8                                                          14647981               300.2 ns/op            18 B/op          0 allocs/op
-BenchmarkSelect/columns_-_where_in-8                                                                    18710425               233.0 ns/op            28 B/op          0 allocs/op
-BenchmarkSelect/columns_-_where_in#01-8                                                                 11065960               182.1 ns/op            24 B/op          0 allocs/op
-BenchmarkSelect/columns_-_where_like-8                                                                  20629710               126.2 ns/op            19 B/op          0 allocs/op
-BenchmarkDelete/simple_del-8                                                                            25337035               123.7 ns/op            21 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where-8                                                                      13867886               152.5 ns/op            25 B/op          0 allocs/op
-BenchmarkDelete/del_where_conditions-8                                                                  20007450               107.5 ns/op            26 B/op          0 allocs/op
-BenchmarkDelete/del_where_conditions_limit-8                                                            21412128               111.8 ns/op            22 B/op          0 allocs/op
-BenchmarkDelete/del_where_conditions_limit_--_shuffled-8                                                21919268               128.5 ns/op            24 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_quick-8                                                                22608212               145.3 ns/op            23 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_ignore-8                                                               17356704               198.3 ns/op            17 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_partition-8                                                            18770984               155.7 ns/op            21 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_order_by_limit-8                                                       11128137               200.4 ns/op            21 B/op          0 allocs/op
-BenchmarkUpdate/update_simple-8                                                                         13399810               195.9 ns/op            22 B/op          0 allocs/op
-BenchmarkUpdate/update_where-8                                                                          29478886               136.1 ns/op            18 B/op          0 allocs/op
-BenchmarkUpdate/update_where_order_limit-8                                                              18497040               311.7 ns/op            26 B/op          0 allocs/op
-BenchmarkUpdate/update_where_and_order_limit-8                                                          16168311               174.5 ns/op            20 B/op          0 allocs/op
-BenchmarkUpdate/update_select-8                                                                         12885265               294.2 ns/op            20 B/op          0 allocs/op
-BenchmarkUpdate/update_join-8                                                                           17899226               113.7 ns/op            16 B/op          0 allocs/op
-BenchmarkInsert/simple_insert-8                                                                          4280902               571.5 ns/op            86 B/op          1 allocs/op
-BenchmarkInsert/simple_insert_params-8                                                                   8915893               380.1 ns/op            86 B/op          1 allocs/op
-BenchmarkInsert/simple_insert_params_shuffled-8                                                         10031875               288.6 ns/op            86 B/op          1 allocs/op
-BenchmarkInsert/simple_insert_params_select-8                                                            7867750               411.0 ns/op            86 B/op          1 allocs/op
-PASS
-ok
-```
-
 ## Instalation
 
 Use `go get` to install v2
@@ -289,3 +244,49 @@ query, params := Insert().Clause("IGNORE", "")
 
 The `Clause` method always will inject the clause after the last uses building command
 
+
+
+## How fast is it?
+
+```bash
+goos: linux
+goarch: amd64
+pkg: github.com/profe-ajedrez/obreron/v2
+cpu: Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz
+BenchmarkSelect/columns_-_from-8                                                                        18056312               114.1 ns/op            22 B/op          0 allocs/op
+BenchmarkSelect/columns_-_from#01-8                                                                     23938047               129.7 ns/op            22 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_from-8                                                                 15589848               141.3 ns/op            18 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_from-8                                                22873436               135.7 ns/op            17 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from-8                                       17448961               185.9 ns/op            30 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where-8                               22747176               206.5 ns/op            25 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_Col_If_-_columns_params_-_Col_If_-_from_-_join_if_-where-8             19259132               142.5 ns/op            27 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#01-8                            17754853               131.1 ns/op            19 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#02-8                            19057185               139.1 ns/op            28 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where_shuffled-8                      20544037               120.0 ns/op            26 B/op          0 allocs/op
+BenchmarkSelect/complex_query_shuffled-8                                                                19129396               125.9 ns/op            21 B/op          0 allocs/op
+BenchmarkSelect/complex_query_badly_shuffled-8                                                          14647981               300.2 ns/op            18 B/op          0 allocs/op
+BenchmarkSelect/columns_-_where_in-8                                                                    18710425               233.0 ns/op            28 B/op          0 allocs/op
+BenchmarkSelect/columns_-_where_in#01-8                                                                 11065960               182.1 ns/op            24 B/op          0 allocs/op
+BenchmarkSelect/columns_-_where_like-8                                                                  20629710               126.2 ns/op            19 B/op          0 allocs/op
+BenchmarkDelete/simple_del-8                                                                            25337035               123.7 ns/op            21 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where-8                                                                      13867886               152.5 ns/op            25 B/op          0 allocs/op
+BenchmarkDelete/del_where_conditions-8                                                                  20007450               107.5 ns/op            26 B/op          0 allocs/op
+BenchmarkDelete/del_where_conditions_limit-8                                                            21412128               111.8 ns/op            22 B/op          0 allocs/op
+BenchmarkDelete/del_where_conditions_limit_--_shuffled-8                                                21919268               128.5 ns/op            24 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_quick-8                                                                22608212               145.3 ns/op            23 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_ignore-8                                                               17356704               198.3 ns/op            17 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_partition-8                                                            18770984               155.7 ns/op            21 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_order_by_limit-8                                                       11128137               200.4 ns/op            21 B/op          0 allocs/op
+BenchmarkUpdate/update_simple-8                                                                         13399810               195.9 ns/op            22 B/op          0 allocs/op
+BenchmarkUpdate/update_where-8                                                                          29478886               136.1 ns/op            18 B/op          0 allocs/op
+BenchmarkUpdate/update_where_order_limit-8                                                              18497040               311.7 ns/op            26 B/op          0 allocs/op
+BenchmarkUpdate/update_where_and_order_limit-8                                                          16168311               174.5 ns/op            20 B/op          0 allocs/op
+BenchmarkUpdate/update_select-8                                                                         12885265               294.2 ns/op            20 B/op          0 allocs/op
+BenchmarkUpdate/update_join-8                                                                           17899226               113.7 ns/op            16 B/op          0 allocs/op
+BenchmarkInsert/simple_insert-8                                                                          4280902               571.5 ns/op            86 B/op          1 allocs/op
+BenchmarkInsert/simple_insert_params-8                                                                   8915893               380.1 ns/op            86 B/op          1 allocs/op
+BenchmarkInsert/simple_insert_params_shuffled-8                                                         10031875               288.6 ns/op            86 B/op          1 allocs/op
+BenchmarkInsert/simple_insert_params_select-8                                                            7867750               411.0 ns/op            86 B/op          1 allocs/op
+PASS
+ok
+```
