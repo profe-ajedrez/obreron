@@ -25,6 +25,8 @@ func TestSelect(t *testing.T) {
 				t.FailNow()
 			}
 		}
+
+		tc.tc.Close()
 	}
 }
 
@@ -60,6 +62,8 @@ func TestDelete(t *testing.T) {
 				t.FailNow()
 			}
 		}
+
+		tc.tc.Close()
 	}
 }
 
@@ -95,6 +99,8 @@ func TestUpdate(t *testing.T) {
 				t.FailNow()
 			}
 		}
+
+		tc.tc.Close()
 	}
 }
 
@@ -130,6 +136,8 @@ func TestInsert(t *testing.T) {
 				t.FailNow()
 			}
 		}
+
+		tc.tc.Close()
 	}
 }
 
@@ -194,6 +202,32 @@ func selectTestCases() (cases []struct {
 			expected:       "SELECT a1, a2, ? AS diez, a3, ? AS cien FROM client WHERE 1 = 1",
 			expectedParams: []any{10, 100},
 			tc:             Select().Col("a1, a2, ? AS diez", 10).Col("a3, ? AS cien", 100).ColIf(false, "a4").From("client").Where("1 = 1"),
+		},
+		{
+			name:           "columns params - Col If - columns params - Col If - from - join if -where",
+			expected:       "SELECT SQL NO CACHE b2 AS b2, a1, a2, ? AS diez, a3, ? AS cien FROM client JOIN tablada t ON t.id=client.id LEFT JOIN tabla_b tb ON tb.id = client.id LEFT JOIN tabla_c tc ON tc.id = client.id RIGHT JOIN tabla_e te ON te.id = client.id AND 2 = 2 RIGHT JOIN tabla_f tf ON tf.id = client.id OUTER JOIN tabla_h th ON th.id = client.id AND 2 = 2 OUTER JOIN tabla_i ti ON ti.id = client.id WHERE 1 = 1 AND 3 = 3 AND colX LIKE '%chamullo%' OR 4 = 4 OR 5 = 5 GROUP BY colY , colZ HAVING colZ = 'abc' ORDER BY 1 ASC LIMIT ? OFFSET ?",
+			expectedParams: []any{10, 100, 100, 200},
+			tc: Select().Clause("SQL NO", "").ClauseIf(true, "CACHE", "").
+				ColIf(true, "b2 AS b2").
+				Col("a1, a2, ? AS diez", 10).
+				Col("a3, ? AS cien", 100).
+				ColIf(false, "a4").
+				From("client").
+				JoinIf(true, "tablada t ON t.id=client.id").
+				LeftJoin("tabla_b tb ON tb.id = client.id").
+				LeftJoinIf(true, "tabla_c tc").OnIf(true, "tc.id = client.id").
+				LeftJoinIf(false, "tabla_d td ON td.id = client.id").
+				RightJoin("tabla_e te ON te.id = client.id").AndIf(true, "2 = 2").
+				RightJoinIf(true, "tabla_f tf ON tf.id = client.id").
+				RightJoinIf(false, "tabla_g tg ON tg.id = client.id").
+				OuterJoin("tabla_h th ON th.id = client.id").AndIf(true, "2 = 2").
+				OuterJoinIf(true, "tabla_i ti ON ti.id = client.id").
+				OuterJoinIf(false, "tabla_j tg ON tj.id = client.id").
+				Where("1 = 1").AndIf(true, "3 = 3").And("colX").LikeIf(true, "'%chamullo%'").Or("4 = 4").OrIf(true, "5 = 5").
+				GroupBy("colY").GroupBy("colZ").Having("colZ = 'abc'").
+				OrderBy("1 ASC").
+				Limit(100).
+				Offset(200),
 		},
 		{
 			name:           "columns params - columns params - Col If - from - where",
@@ -305,18 +339,18 @@ func deleteTestCases() []struct {
 		},
 		{
 			name:           "simple del where",
-			expected:       "DELETE FROM client WHERE client_id = 100",
+			expected:       "DELETE FROM client WHERE client_id = 100 AND b = 3 OR 2 = 2 OR 3 = 3",
 			expectedParams: nil,
-			tc:             Delete().From("client").Where("client_id = 100"),
+			tc:             Delete().From("client").Where("client_id = 100").AndIf(true, "b = 3").OrIf(true, "2 = 2").Or("3 = 3"),
 		},
 		{
 			name:           "del where conditions",
-			expected:       "DELETE FROM client WHERE client_id = 100 AND estado_cliente = 0 AND regime_cliente IN ('G01','G02', ?)",
+			expected:       "DELETE FROM client WHERE client_id = 100 AND estado_cliente = 0 AND regime_cliente IN ('G01','G02', ?) AND a LIKE '%ago%' -- Comment\n",
 			expectedParams: []any{"'G03'"},
 			tc: Delete().From("client").
 				Where("client_id = 100").
 				And("estado_cliente = 0").
-				Y().In("regime_cliente", "'G01','G02', ?", "'G03'"),
+				Y().In("regime_cliente", "'G01','G02', ?", "'G03'").And("a").LikeIf(true, "'%ago%'").ClauseIf(true, "-- Comment\n", ""),
 		},
 		{
 			name:           "del where conditions limit",
@@ -401,25 +435,29 @@ func updateTestCases() (tcs []struct {
 			expectedParams: []any{1, "'CL'", 10},
 			tc:             Update("client").Set("status = 0").Where("status = ?", 1).And("country = ?", "'CL'").OrderBy("ciudad").Limit(10),
 		},
+		// UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9, a = 2, c = 3 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id AND regime_cliente IN ('G01','G02', ?) AND 2 = 2 OR 3 = 3 OR 4 = 4 AND colX LIKE '%ago%' AND colN LIKE '%oga%' AND colY (1, 2, 3) --- Got
+		// UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9, a = 2, c = 3 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id AND regime_cliente IN ('G01','G02', ?) AND 2 = 2 OR 3 = 3 OR 4 = 4 AND colX LIKE '%ago%' AND colN LIKE '%oga%' AND colY LIKE (1, 2, 3)
 		{
 			name:           "update select",
-			expected:       "UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id",
-			expectedParams: nil,
+			expected:       "UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9, a = 2, c = 3 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id AND regime_cliente IN ('G01','G02', ?) AND 2 = 2 OR 3 = 3 OR 4 = 4 AND colX LIKE '%ago%' AND colN LIKE '%oga%' AND colY IN (1, 2, 3)",
+			expectedParams: []any{"'G03'"},
 			tc: Update("items").
-				ColSelect(Select().Col("id, retail / wholesale AS markup, quantity").From("items"), "discounted").
-				Set("items.retail = items.retail * 0.9").
+				ColSelectIf(true, Select().Col("id, retail / wholesale AS markup, quantity").From("items"), "discounted").
+				Set("items.retail = items.retail * 0.9").Set("a = 2").SetIf(true, "c = 3").
 				Where("discounted.markup >= 1.3").
 				And("discounted.quantity < 100").
-				And("items.id = discounted.id"),
+				And("items.id = discounted.id").Y().In("regime_cliente", "'G01','G02', ?", "'G03'").AndIf(true, "2 = 2").Or("3 = 3").OrIf(true, "4 = 4").And("colX").Like("'%ago%'").AndIf(true, "colN").LikeIf(true, "'%oga%'").Y().In("colY", "1, 2, 3"),
 		},
+		// UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id --- Got
+		// UPDATE items ,( SELECT , id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id
 		{
 			name:           "update join",
-			expected:       "UPDATE business AS b JOIN business_geocode AS g ON b.business_id = g.business_id SET b.mapx = g.latitude, b.mapy = g.longitude WHERE (b.mapx = '' or b.mapx = 0) AND g.latitude > 0",
+			expected:       "UPDATE business AS b JOIN business_geocode AS g ON b.business_id = g.business_id SET b.mapx = g.latitude, b.mapy = g.longitude WHERE (b.mapx = '' or b.mapx = 0) AND g.latitude > 0 AND 3 = 3",
 			expectedParams: nil,
 			tc: Update("business AS b").
-				Join("business_geocode AS g").On("b.business_id = g.business_id").
+				JoinIf(true, "business_geocode AS g").OnIf(true, "b.business_id = g.business_id").
 				Set("b.mapx = g.latitude, b.mapy = g.longitude").
-				Where("(b.mapx = '' or b.mapx = 0)").And("g.latitude > 0"),
+				Where("(b.mapx = '' or b.mapx = 0)").And("g.latitude > 0").ClauseIf(true, "AND", "3 = 3"),
 		},
 	}...)
 	return tcs
@@ -439,20 +477,20 @@ func insertTestCases() (tcs []struct {
 	}{
 		{
 			name:           "simple insert",
-			expected:       "INSERT INTO client ( name, value ) VALUES ( ?, ? )",
+			expected:       "INSERT IGNORE INTO client ( name, value ) VALUES ( ?,? )",
 			expectedParams: []any{"'some name'", "'somemail@mail.net'"},
-			tc: Insert().Into("client").
+			tc: Insert().Ignore().Into("client").
 				Col("name, value", "'some name'", "'somemail@mail.net'"),
 		},
 		{
 			name:           "simple insert params",
-			expected:       "INSERT INTO client ( name, value ) VALUES ( ?, ? )",
-			expectedParams: []any{"'some name'", "'somemail@mail.net'"},
-			tc:             Insert().Into("client").Col("name, value", "'some name'", "'somemail@mail.net'"),
+			expected:       "INSERT INTO client ( name, value, data ) VALUES ( ?,?,? )",
+			expectedParams: []any{"'some name'", "'somemail@mail.net'", "'some data'"},
+			tc:             Insert().Into("client").Col("name", "'some name'").Col("value", "'somemail@mail.net'").ColIf(true, "data", "'some data'").ColIf(false, "info", 12),
 		},
 		{
 			name:           "simple insert params shuffled",
-			expected:       "INSERT INTO client ( name, value ) VALUES ( ?, ? )",
+			expected:       "INSERT INTO client ( name, value ) VALUES ( ?,? )",
 			expectedParams: []any{"'some name'", "'somemail@mail.net'"},
 			tc:             Insert().Col("name, value", "'some name'", "'somemail@mail.net'").Into("client"),
 		},
@@ -462,7 +500,8 @@ func insertTestCases() (tcs []struct {
 			expectedParams: nil,
 			tc: Insert().
 				Into("courses").
-				ColSelect("name, location, gid", Select().Col("name, location, 1").From("courses").Where("cid = 2")),
+				ColSelectIf(true, "name, location, gid", Select().Col("name, location, 1").From("courses").Where("cid = 2")).
+				ColSelectIf(false, "last_name, last_location, grid", Select().Col("last_name, last_location, 11").From("courses").Where("cid = 2")),
 		},
 	}...)
 
