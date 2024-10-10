@@ -16,6 +16,8 @@ func Insert() *InsertStament {
 	i := &InsertStament{pool.New().(*stament), false}
 	i.add(insertS, "INSERT", "")
 
+	i.firstCol = true
+
 	return i
 }
 
@@ -34,13 +36,20 @@ func (in *InsertStament) Col(col string, p ...any) *InsertStament {
 	if !in.firstCol {
 		in.Clause(",", "")
 		in.add(colsS, col, "")
-		in.add(insP, "", strings.Repeat(", ?", len(p)), p...)
+		in.add(insP, "", strings.Repeat("?", len(p)), p...)
 	} else {
-		in.firstCol = true
+		in.firstCol = false
 		in.add(colsS, "(", col)
-		pp := strings.Repeat(" ?,", len(p))
+		pp := ""
+
+		if l := len(p); l >= 1 {
+			pp = strings.Repeat("?,", len(p)-1)
+		}
+
+		pp += "?"
+
 		spp := unsafe.Slice(unsafe.StringData(pp), len(pp))
-		spp = spp[:len(spp)-1]
+		spp = spp[:]
 		pp = *(*string)(unsafe.Pointer(&spp))
 		in.add(insP, "", pp, p...)
 	}
@@ -56,18 +65,11 @@ func (in *InsertStament) ColIf(cond bool, col string, p ...any) *InsertStament {
 }
 
 func (in *InsertStament) ColSelect(col string, expr *SelectStm) *InsertStament {
-	if !in.firstCol {
-		in.Clause(",", "")
-		in.add(colsS, col, "")
-		q, pp := expr.Build()
-		in.add(insP, "", q, pp...)
-	} else {
-		in.firstCol = true
-		in.add(colsS, "(", col)
-		q, pp := expr.Build()
-		in.add(insP, "", q, pp...)
-		in.withSelect = true
-	}
+	in.firstCol = true
+	in.add(colsS, "(", col)
+	q, pp := expr.Build()
+	in.add(insP, "", q, pp...)
+	in.withSelect = true
 	return in
 }
 
@@ -119,13 +121,13 @@ func (in *InsertStament) Build() (string, []any) {
 		k := i
 		j := 0
 
-		if in.s[i].sType == insP {
-			break
-		}
-
 		for k < len(in.s) && in.s[k].sType == in.s[i].sType {
-			if j > 0 && j < len(in.s)-1 && in.s[i].sType != colsS {
-				b.WriteString(" ")
+			if j > 0 && j < len(in.s)-1 {
+				if in.s[i].sType != colsS {
+					b.WriteString(" ")
+				} else {
+					b.WriteString(", ")
+				}
 			}
 
 			b.Write(buf[in.s[k].start : in.s[k].start+in.s[k].length])
@@ -150,7 +152,7 @@ func (in *InsertStament) Build() (string, []any) {
 	if in.withSelect {
 		b.WriteString(") ")
 	} else {
-		b.WriteString(") VALUES (")
+		b.WriteString(") VALUES ( ")
 	}
 
 	for i < len(in.s) {
@@ -158,26 +160,25 @@ func (in *InsertStament) Build() (string, []any) {
 		j := 0
 
 		for k < len(in.s) && in.s[k].sType == in.s[i].sType {
-			if j > 0 && j < len(in.s)-1 && in.s[i].sType != colsS {
-				b.WriteString(" ")
-			}
+
+			//if j > 0 && j < len(in.s)-1 {
+			//	if in.s[i].sType != colsS &&  {
+			//		b.WriteString(" ")
+			//	}
+			//}
 
 			b.Write(buf[in.s[k].start : in.s[k].start+in.s[k].length])
 
-			if in.s[k].pIndex > -1 {
-				copy(dest[first:], in.p[in.s[k].pIndex:in.s[k].pIndex+in.s[k].pCount])
-				first += in.s[k].pCount
-			}
+			//if in.s[k].pIndex > -1 {
+			//	copy(dest[first:], in.p[in.s[k].pIndex:in.s[k].pIndex+in.s[k].pCount])
+			//	first += in.s[k].pCount
+			//}
 
 			k++
 			j++
 		}
 
 		i = k - 1
-
-		if i < len(in.s)-1 {
-			b.WriteString(" ")
-		}
 
 		i++
 	}
@@ -187,7 +188,7 @@ func (in *InsertStament) Build() (string, []any) {
 	}
 
 	ss := b.Bytes()
-	return *(*string)(unsafe.Pointer(&ss)), dest
+	return *(*string)(unsafe.Pointer(&ss)), in.p
 }
 
 func (in *InsertStament) Close() {

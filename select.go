@@ -255,6 +255,11 @@ func (st *SelectStm) Like(expr string, p ...any) *SelectStm {
 	return st
 }
 
+// LikeIf adds a LIKE clause to the query after the las clause added, when cond is true
+//
+// # Example
+//
+// Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("city").LikeIf(true, "'%ago%'")
 func (st *SelectStm) LikeIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.clause("LIKE", expr, p...)
@@ -262,11 +267,21 @@ func (st *SelectStm) LikeIf(cond bool, expr string, p ...any) *SelectStm {
 	return st
 }
 
+// In adds a IN clause to the query after the las clause added
+//
+// # Example
+//
+// Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("city").In("'Nagoya'", "'Tokio", "'Parral'")
 func (st *SelectStm) In(expr string, p ...any) *SelectStm {
 	st.clause("IN (", expr+")", p...)
 	return st
 }
 
+// GroupBy adds a GROUP BY clause to the query
+//
+// # Example
+//
+// Select().Col("a1, a2, a3").From("client").Where("1 = 1").GroupBy("a1")
 func (st *SelectStm) GroupBy(grp string, p ...any) *SelectStm {
 	if !st.grouped {
 		st.add(groupS, "GROUP BY", grp, p...)
@@ -278,16 +293,31 @@ func (st *SelectStm) GroupBy(grp string, p ...any) *SelectStm {
 	return st
 }
 
+// Having adds a HAVING clause to the query
+//
+// # Example
+//
+// Select().Col("a1, a2, a3, COUNT(1) AS how_many").From("client").Where("1 = 1").GroupBy("a1").Having(how_many > 100)
 func (st *SelectStm) Having(hav string, p ...any) *SelectStm {
 	st.add(havingS, "HAVING", hav, p...)
 	return st
 }
 
+// OrderBy adds an ORDER BY clause to the query
+//
+// # Example
+//
+// Select().Col("a1, a2, a3").From("client").Where("1 = 1").OrderBy("a1 ASC")
 func (st *SelectStm) OrderBy(expr string, p ...any) *SelectStm {
-	st.add(limitS, "ORDER BY", expr, p...)
+	st.add(orderS, "ORDER BY", expr, p...)
 	return st
 }
 
+// Limit adds a LIMIT clause to the query
+//
+// # Example
+//
+// Select().Col("a1, a2, a3").From("client").Where("1 = 1").Limit(100)
 func (st *SelectStm) Limit(limit int) *SelectStm {
 	st.add(limitS, "LIMIT", "?", limit)
 	return st
@@ -298,11 +328,21 @@ func (st *SelectStm) Offset(off int) *SelectStm {
 	return st
 }
 
+// Clause adds a custom clause to the query in the position were is invoked
+//
+// # Example
+//
+// Select().Clause("SQL NO CACHE").Col("a1, a2, a3").From("client").Where("1 = 1")
 func (st *SelectStm) Clause(clause, expr string, p ...any) *SelectStm {
 	st.add(st.lastPos, clause, expr, p...)
 	return st
 }
 
+// ClauseIf adds a custom clause to the query in the position were is invoked, whencond is true
+//
+// # Example
+//
+// Select().ClauseIf(true, "SQL NO CACHE").Col("a1, a2, a3").From("client").Where("1 = 1")
 func (st *SelectStm) ClauseIf(cond bool, clause, expr string, p ...any) *SelectStm {
 	if cond {
 		st.add(st.lastPos, clause, expr, p...)
