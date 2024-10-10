@@ -60,7 +60,7 @@ func (dst *DeleteStament) Like(expr string, p ...any) *DeleteStament {
 
 func (dst *DeleteStament) LikeIf(cond bool, expr string, p ...any) *DeleteStament {
 	if cond {
-		dst.clause("LIKE", expr, p...)
+		dst.Like(expr, p...)
 	}
 	return dst
 }
@@ -91,7 +91,7 @@ func (dst *DeleteStament) Clause(clause, expr string, p ...any) *DeleteStament {
 
 func (dst *DeleteStament) ClauseIf(cond bool, clause, expr string, p ...any) *DeleteStament {
 	if cond {
-		dst.add(dst.lastPos, clause, expr, p...)
+		dst.Clause(clause, expr, p...)
 	}
 	return dst
 }

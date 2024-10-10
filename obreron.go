@@ -20,6 +20,10 @@ func closeStament(st *stament) {
 
 	st.p = st.p[:0]
 	st.s = st.s[:0]
+	st.lastPos = 0
+	st.grouped = false
+	st.firstCol = true
+	st.whereAdded = false
 	st.buff.Reset()
 
 	pool.Put(st)
@@ -43,10 +47,6 @@ func (st *stament) clause(clause, expr string, p ...any) {
 	st.add(st.lastPos, clause, expr, p...)
 }
 
-func (st *stament) OpenPar() {
-	st.add(st.lastPos, "(", "")
-}
-
 func (st *stament) where(cond string, p ...any) {
 	if !st.whereAdded {
 		st.add(whereS, "WHERE", cond, p...)
@@ -57,10 +57,7 @@ func (st *stament) where(cond string, p ...any) {
 
 }
 
-func (st *stament) ClosePar() {
-	st.add(st.lastPos, ")", "")
-}
-
+// Build return the query as a string with the added parameters
 func (st *stament) Build() (string, []any) {
 	b := bytes.Buffer{}
 	b.Grow(st.buff.Len())

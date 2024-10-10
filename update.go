@@ -8,7 +8,7 @@ func Update(table string) *UpdateStament {
 	d := &UpdateStament{
 		stament: pool.New().(*stament),
 	}
-
+	d.firstCol = true
 	d.add(updateS, "UPDATE", table)
 	return d
 }
@@ -19,7 +19,7 @@ func (up *UpdateStament) ColSelect(col *SelectStm, alias string) *UpdateStament 
 
 	q, p := col.Build()
 	up.Clause(q, "", p...)
-	up.ClosePar()
+	up.Clause(")", "")
 	up.Clause(alias, "")
 
 	return up
@@ -35,10 +35,10 @@ func (up *UpdateStament) ColSelectIf(cond bool, col *SelectStm, alias string) *U
 
 func (up *UpdateStament) Set(expr string, p ...any) *UpdateStament {
 	if !up.firstCol {
-		up.Clause(",", "")
+		up.Clause(", ", "")
 		up.add(setS, "", expr, p...)
 	} else {
-		up.firstCol = true
+		up.firstCol = false
 		up.add(setS, "SET", expr, p...)
 	}
 
@@ -47,7 +47,7 @@ func (up *UpdateStament) Set(expr string, p ...any) *UpdateStament {
 
 func (up *UpdateStament) SetIf(cond bool, expr string, p ...any) *UpdateStament {
 	if cond {
-		up.add(setS, "SET", expr, p...)
+		up.Set(expr, p...)
 	}
 
 	return up
@@ -125,7 +125,7 @@ func (up *UpdateStament) Clause(clause, expr string, p ...any) *UpdateStament {
 
 func (up *UpdateStament) ClauseIf(cond bool, clause, expr string, p ...any) *UpdateStament {
 	if cond {
-		up.add(up.lastPos, clause, expr, p...)
+		up.Clause(clause, expr, p...)
 	}
 	return up
 }
@@ -137,7 +137,8 @@ func (up *UpdateStament) Join(expr string, p ...any) *UpdateStament {
 
 func (up *UpdateStament) JoinIf(cond bool, expr string, p ...any) *UpdateStament {
 	if cond {
-		up.add(updateS, "JOIN", expr, p...)
+		up.Join(expr, p...)
+
 	}
 	return up
 }
@@ -149,7 +150,7 @@ func (up *UpdateStament) On(on string, p ...any) *UpdateStament {
 
 func (up *UpdateStament) OnIf(cond bool, expr string, p ...any) *UpdateStament {
 	if cond {
-		up.clause("ON", expr, p...)
+		up.On(expr, p...)
 	}
 	return up
 }

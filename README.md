@@ -21,36 +21,42 @@ goos: linux
 goarch: amd64
 pkg: github.com/profe-ajedrez/obreron/v2
 cpu: Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz
-BenchmarkSelect/columns_-_from-8                44610848                62.10 ns/op           24 B/op          0 allocs/op
-BenchmarkSelect/columns_-_from#01-8             24653995                63.52 ns/op           25 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_from-8         32579121                59.88 ns/op           16 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_from-8                28909456                71.47 ns/op           23 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from-8               35311484                64.07 ns/op           19 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where-8       36645351                69.15 ns/op           21 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#01-8            28030076                71.77 ns/op           28 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#02-8            33171466                62.83 ns/op           16 B/op          0 allocs/op
-BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where_shuffled-8      39448615                69.81 ns/op           20 B/op          0 allocs/op
-BenchmarkSelect/complex_query_shuffled-8                                                25634710                75.16 ns/op           23 B/op          0 allocs/op
-BenchmarkSelect/complex_query_badly_shuffled-8                                          45230116                68.14 ns/op           19 B/op          0 allocs/op
-BenchmarkDelete/simple_del-8                                                            24681375                68.65 ns/op           21 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where-8                                                      23892154                68.72 ns/op           22 B/op          0 allocs/op
-BenchmarkDelete/del_where_conditions-8                                                  23020927                73.73 ns/op           23 B/op          0 allocs/op
-BenchmarkDelete/del_where_conditions_limit-8                                            23444376                73.24 ns/op           22 B/op          0 allocs/op
-BenchmarkDelete/del_where_conditions_limit_--_shuffled-8                                20474908                75.58 ns/op           19 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_quick-8                                                18463716                82.85 ns/op           22 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_ignore-8                                               21899524                71.26 ns/op           24 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_partition-8                                            22774772                76.24 ns/op           23 B/op          0 allocs/op
-BenchmarkDelete/simple_del_where_order_by_limit-8                                       24599192                72.83 ns/op           24 B/op          0 allocs/op
-BenchmarkUpdate/update_simple-8                                                         26563249                75.88 ns/op           20 B/op          0 allocs/op
-BenchmarkUpdate/update_where-8                                                          23154291                73.58 ns/op           17 B/op          0 allocs/op
-BenchmarkUpdate/update_where_order_limit-8                                              25949305                68.23 ns/op           20 B/op          0 allocs/op
-BenchmarkUpdate/update_where_and_order_limit-8                                          44520046                79.09 ns/op           27 B/op          0 allocs/op
-BenchmarkUpdate/update_select-8                                                         23995230                79.18 ns/op           23 B/op          0 allocs/op
-BenchmarkUpdate/update_join-8                                                           22023397                80.67 ns/op           21 B/op          0 allocs/op
-BenchmarkInsert/simple_insert-8                                                         14466757               145.0 ns/op            85 B/op          1 allocs/op
-BenchmarkInsert/simple_insert_params-8                                                  14740395               134.9 ns/op            84 B/op          1 allocs/op
-BenchmarkInsert/simple_insert_params_shuffled-8                                         12962823               121.0 ns/op            85 B/op          1 allocs/op
-BenchmarkInsert/simple_insert_params_select-8                                           16434265               135.9 ns/op            84 B/op          1 allocs/op
+BenchmarkSelect/columns_-_from-8                                                                        18056312               114.1 ns/op            22 B/op          0 allocs/op
+BenchmarkSelect/columns_-_from#01-8                                                                     23938047               129.7 ns/op            22 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_from-8                                                                 15589848               141.3 ns/op            18 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_from-8                                                22873436               135.7 ns/op            17 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from-8                                       17448961               185.9 ns/op            30 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where-8                               22747176               206.5 ns/op            25 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_Col_If_-_columns_params_-_Col_If_-_from_-_join_if_-where-8             19259132               142.5 ns/op            27 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#01-8                            17754853               131.1 ns/op            19 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where#02-8                            19057185               139.1 ns/op            28 B/op          0 allocs/op
+BenchmarkSelect/columns_params_-_columns_params_-_Col_If_-_from_-_where_shuffled-8                      20544037               120.0 ns/op            26 B/op          0 allocs/op
+BenchmarkSelect/complex_query_shuffled-8                                                                19129396               125.9 ns/op            21 B/op          0 allocs/op
+BenchmarkSelect/complex_query_badly_shuffled-8                                                          14647981               300.2 ns/op            18 B/op          0 allocs/op
+BenchmarkSelect/columns_-_where_in-8                                                                    18710425               233.0 ns/op            28 B/op          0 allocs/op
+BenchmarkSelect/columns_-_where_in#01-8                                                                 11065960               182.1 ns/op            24 B/op          0 allocs/op
+BenchmarkSelect/columns_-_where_like-8                                                                  20629710               126.2 ns/op            19 B/op          0 allocs/op
+BenchmarkDelete/simple_del-8                                                                            25337035               123.7 ns/op            21 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where-8                                                                      13867886               152.5 ns/op            25 B/op          0 allocs/op
+BenchmarkDelete/del_where_conditions-8                                                                  20007450               107.5 ns/op            26 B/op          0 allocs/op
+BenchmarkDelete/del_where_conditions_limit-8                                                            21412128               111.8 ns/op            22 B/op          0 allocs/op
+BenchmarkDelete/del_where_conditions_limit_--_shuffled-8                                                21919268               128.5 ns/op            24 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_quick-8                                                                22608212               145.3 ns/op            23 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_ignore-8                                                               17356704               198.3 ns/op            17 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_partition-8                                                            18770984               155.7 ns/op            21 B/op          0 allocs/op
+BenchmarkDelete/simple_del_where_order_by_limit-8                                                       11128137               200.4 ns/op            21 B/op          0 allocs/op
+BenchmarkUpdate/update_simple-8                                                                         13399810               195.9 ns/op            22 B/op          0 allocs/op
+BenchmarkUpdate/update_where-8                                                                          29478886               136.1 ns/op            18 B/op          0 allocs/op
+BenchmarkUpdate/update_where_order_limit-8                                                              18497040               311.7 ns/op            26 B/op          0 allocs/op
+BenchmarkUpdate/update_where_and_order_limit-8                                                          16168311               174.5 ns/op            20 B/op          0 allocs/op
+BenchmarkUpdate/update_select-8                                                                         12885265               294.2 ns/op            20 B/op          0 allocs/op
+BenchmarkUpdate/update_join-8                                                                           17899226               113.7 ns/op            16 B/op          0 allocs/op
+BenchmarkInsert/simple_insert-8                                                                          4280902               571.5 ns/op            86 B/op          1 allocs/op
+BenchmarkInsert/simple_insert_params-8                                                                   8915893               380.1 ns/op            86 B/op          1 allocs/op
+BenchmarkInsert/simple_insert_params_shuffled-8                                                         10031875               288.6 ns/op            86 B/op          1 allocs/op
+BenchmarkInsert/simple_insert_params_select-8                                                            7867750               411.0 ns/op            86 B/op          1 allocs/op
+PASS
+ok
 ```
 
 ## Instalation
