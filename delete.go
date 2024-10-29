@@ -1,5 +1,7 @@
 package obreron
 
+// DeleteStm represents a DELETE SQL statement builder.
+// It provides a fluent interface for constructing DELETE queries.
 type DeleteStm struct {
 	*stament
 }
@@ -70,15 +72,23 @@ func (dst *DeleteStm) In(value, expr string, p ...any) *DeleteStm {
 	return dst
 }
 
-// InArgs adds an In clause to the stament automatically setting the positional parameters of the query based on the
-// passed parameters
-func (up *DeleteStm) InArgs(value string, p ...any) *DeleteStm {
-	up.stament.inArgs(value, p...)
-	return up
+// InArgs adds an IN clause to the statement with automatically generated positional parameters.
+// Example:
+//   Delete().From("users").Where("active = ?", true).InArgs("id", 1, 2, 3)
+// Generates: DELETE FROM users WHERE active = ? AND id IN (?, ?, ?)
+func (dst *DeleteStm) InArgs(value string, p ...any) *DeleteStm {
+	dst.stament.inArgs(value, p...)
+	return dst
 }
 
+// Close releases the statement back to the pool.
+// After calling Close, the statement should not be used.
 func (dst *DeleteStm) Close() {
+	if dst.stament == nil {
+		return
+	}
 	closeStament(dst.stament)
+	dst.stament = nil
 }
 
 func (dst *DeleteStm) OrderBy(expr string, p ...any) *DeleteStm {

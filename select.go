@@ -235,9 +235,14 @@ func (st *SelectStm) AndIf(cond bool, expr string, p ...any) *SelectStm {
 //
 // # Example
 //
-//	Update("client").Set("status = 0").Where("country = ?", "CL").Y().In("status", "", 1, 2, 3, 4)
+//	Select().
+//		Col("*").
+//		From("client").
+//		Where("country = ?", "CL").
+//		Y().
+//		In("status", "", 1, 2, 3, 4)
 //
-// Produces: UPDATE client SET status = 0 WHERE country = ? AND status IN (?, ?, ?, ?)
+// Produces: SELECT * FROM client WHERE country = ? AND status IN (?, ?, ?, ?)
 func (up *SelectStm) Y() *SelectStm {
 	up.clause("AND", "")
 	return up

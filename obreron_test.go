@@ -451,6 +451,12 @@ func updateTestCases() (tcs []struct {
 			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1, 2, 3, 4),
 		},
 		{
+			name:           "update with empty in args",
+			expected:       "UPDATE client SET status = 0 WHERE country = ?",
+			expectedParams: []any{"CL"},
+			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status"),
+		},
+		{
 			name:           "update where",
 			expected:       "UPDATE client SET status = 0 WHERE status = ?",
 			expectedParams: []any{1},

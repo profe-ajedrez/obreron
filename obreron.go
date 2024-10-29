@@ -49,9 +49,23 @@ func (st *stament) clause(clause, expr string, p ...any) {
 }
 
 func (st *stament) inArgs(value string, p ...any) {
-	l := len(p)
-	expr := strings.Repeat("?, ", l)[:l*3-2]
-	st.clause(value+" IN ("+expr+")", "", p...)
+    if len(p) == 0 {
+        panic("I pity the fool who passes no parameters to IN clause!")
+    }
+    
+    if len(p) == 1 {
+        st.clause(value+" = ?", "", p...)
+        return
+    }
+    
+    l := len(p)
+    var builder strings.Builder
+    builder.Grow(l * 2)  // Pre-allocate capacity, fool!
+    builder.WriteString("?")
+    for i := 1; i < l; i++ {
+        builder.WriteString(", ?")
+    }
+    st.clause(value+" IN ("+builder.String()+")", "", p...)
 }
 
 func (st *stament) where(cond string, p ...any) {
