@@ -7,13 +7,23 @@ import (
 	"unsafe"
 )
 
+// InsertStament represents an insert stament
 type InsertStament struct {
 	*stament
 	withSelect bool
 }
 
+// Insert Returns an insert stament
+//
+// # Example
+//
+// ins := Insert().Into("client").Col("name", "'some name'").Col("value", "'somemail@mail.net'").ColIf(true, "data", "'some data'").ColIf(false, "info", 12)
+//
+// query, p := ins.Build()
+//
+// r, err := db.Exec(q, p...)
 func Insert() *InsertStament {
-	i := &InsertStament{pool.New().(*stament), false}
+	i := &InsertStament{pool.Get().(*stament), false}
 	i.add(insertS, "INSERT", "")
 
 	i.firstCol = true
@@ -21,16 +31,35 @@ func Insert() *InsertStament {
 	return i
 }
 
+// Ignore adds Ignore clause to the insert stament
+//
+// # Example
+//
+// ins := Insert().Ignore().Into("client").Col("name, value", "'some name'", "'somemail@mail.net'")
+//
+// query, p := ins.Build()
+//
+// r, err := db.Exec(q, p...)
 func (in *InsertStament) Ignore() *InsertStament {
 	in.add(insertS, "IGNORE", "")
 	return in
 }
 
+// Into adds into clause to the insert stament
 func (in *InsertStament) Into(table string) *InsertStament {
 	in.add(insertS, "INTO", table)
 	return in
 }
 
+// Col adds columns and values to the insert clause
+//
+// # Example
+//
+// ins := insInsert().Col("name, value", "'some name'", "'somemail@mail.net'").Into("client")
+//
+// query, p := ins.Build()
+//
+// r, err := db.Exec(q, p...)
 func (in *InsertStament) Col(col string, p ...any) *InsertStament {
 
 	if !in.firstCol {
@@ -57,6 +86,15 @@ func (in *InsertStament) Col(col string, p ...any) *InsertStament {
 	return in
 }
 
+// ColIf adds columns and values to the insert clause when the cond parameter is true
+//
+// # Example
+//
+// ins := insInsert().ColIf(true, "name, value", "'some name'", "'somemail@mail.net'").Into("client")
+//
+// query, p := ins.Build()
+//
+// r, err := db.Exec(q, p...)
 func (in *InsertStament) ColIf(cond bool, col string, p ...any) *InsertStament {
 	if cond {
 		return in.Col(col, p...)
@@ -64,6 +102,17 @@ func (in *InsertStament) ColIf(cond bool, col string, p ...any) *InsertStament {
 	return in
 }
 
+// ColSelect is a helper method used to build insert select... staments
+//
+// # Example
+//
+// ins := Insert().Into("courses").ColSelectIf(true, "name, location, gid", Select().Col("name, location, 1").From("courses").Where("cid = 2")).ColSelectIf(false, "last_name, last_location, grid", Select().Col("last_name, last_location, 11").From("courses").Where("cid = 2"))
+//
+// query, p := ins.Build()
+//
+// r, err := db.Exec(q, p...)
+//
+// Produces: INSERT INTO courses ( name, location, gid ) SELECT name, location, 1 FROM courses WHERE cid = 2
 func (in *InsertStament) ColSelect(col string, expr *SelectStm) *InsertStament {
 	in.firstCol = true
 	in.add(colsS, "(", col)
@@ -85,6 +134,7 @@ func (in *InsertStament) Clause(clause, expr string, p ...any) *InsertStament {
 	return in
 }
 
+// Build returns the query and the parameters as to be used by *sql.DB.query or *sql.DB.Exec
 func (in *InsertStament) Build() (string, []any) {
 	b := bytes.Buffer{}
 
@@ -177,6 +227,7 @@ func posParams(i int, in *InsertStament, b *bytes.Buffer, buf []byte) {
 	}
 }
 
+// Close free resources used by the stament
 func (in *InsertStament) Close() {
 	closeStament(in.stament)
 }
