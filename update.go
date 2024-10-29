@@ -16,7 +16,7 @@ type UpdateStm struct {
 // r, err := db.Exec(query, p...)
 func Update(table string) *UpdateStm {
 	d := &UpdateStm{
-		stament: pool.New().(*stament),
+		stament: pool.Get().(*stament),
 	}
 	d.firstCol = true
 	d.add(updateS, "UPDATE", table)

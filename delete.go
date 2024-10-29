@@ -8,7 +8,7 @@ type DeleteStm struct {
 
 func Delete() *DeleteStm {
 	d := &DeleteStm{
-		stament: pool.New().(*stament),
+		stament: pool.Get().(*stament),
 	}
 
 	d.add(deleteS, "DELETE", "")
@@ -74,7 +74,9 @@ func (dst *DeleteStm) In(value, expr string, p ...any) *DeleteStm {
 
 // InArgs adds an IN clause to the statement with automatically generated positional parameters.
 // Example:
-//   Delete().From("users").Where("active = ?", true).InArgs("id", 1, 2, 3)
+//
+//	Delete().From("users").Where("active = ?", true).InArgs("id", 1, 2, 3)
+//
 // Generates: DELETE FROM users WHERE active = ? AND id IN (?, ?, ?)
 func (dst *DeleteStm) InArgs(value string, p ...any) *DeleteStm {
 	dst.stament.inArgs(value, p...)
@@ -84,11 +86,7 @@ func (dst *DeleteStm) InArgs(value string, p ...any) *DeleteStm {
 // Close releases the statement back to the pool.
 // After calling Close, the statement should not be used.
 func (dst *DeleteStm) Close() {
-	if dst.stament == nil {
-		return
-	}
 	closeStament(dst.stament)
-	dst.stament = nil
 }
 
 func (dst *DeleteStm) OrderBy(expr string, p ...any) *DeleteStm {

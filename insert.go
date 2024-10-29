@@ -23,7 +23,7 @@ type InsertStament struct {
 //
 // r, err := db.Exec(q, p...)
 func Insert() *InsertStament {
-	i := &InsertStament{pool.New().(*stament), false}
+	i := &InsertStament{pool.Get().(*stament), false}
 	i.add(insertS, "INSERT", "")
 
 	i.firstCol = true

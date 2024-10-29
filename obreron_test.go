@@ -1,6 +1,8 @@
 package obreron
 
-import "testing"
+import (
+	"testing"
+)
 
 // SELECT a1, a2, ? AS diez, colIf1, colIf2, ? AS zero, a3, ? AS cien FROM client c JOIN addresses a ON a.id_cliente = a.id_cliente JOIN phones p ON p.id_cliente = c.id_cliente JOIN mailes m ON m.id_cliente = m.id_cliente AND c.estado_cliente = ? LEFT JOIN left_joined lj ON lj.a1 = c.a1 WHERE a1 = ? AND a2 = ? AND a3 = 10 AND a16 = ? --- Got
 // SELECT a1, a2, ? AS diez, colIf1, colIf2, ? AS zero, a3, ? AS cien FROM client c LEFT JOIN left_joined lj ON lj.a1 = c.a1 JOIN addresses a ON a.id_cliente = a.id_cliente JOIN phones p ON p.id_cliente = c.id_cliente JOIN mailes m ON m.id_cliente = m.id_cliente AND c.estado_cliente = ? WHERE a1 = ? AND a2 = ? AND a3 = 10 AND a16 = ?
@@ -81,6 +83,7 @@ func BenchmarkDelete(b *testing.B) {
 
 func TestUpdate(t *testing.T) {
 	for i, tc := range updateTestCases() {
+
 		sql, p := tc.tc.Build()
 
 		if sql != tc.expected {
@@ -426,6 +429,7 @@ func updateTestCases() (tcs []struct {
 		expected       string
 		expectedParams []any
 	}{
+
 		{
 			name:           "update simple",
 			expected:       "UPDATE client SET status = 0",
@@ -452,9 +456,15 @@ func updateTestCases() (tcs []struct {
 		},
 		{
 			name:           "update with empty in args",
-			expected:       "UPDATE client SET status = 0 WHERE country = ?",
+			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN ()",
 			expectedParams: []any{"CL"},
 			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status"),
+		},
+		{
+			name:           "update with empty in args",
+			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN (?)",
+			expectedParams: []any{"CL", 1},
+			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1),
 		},
 		{
 			name:           "update where",
