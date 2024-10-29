@@ -231,6 +231,18 @@ func (st *SelectStm) AndIf(cond bool, expr string, p ...any) *SelectStm {
 	return st
 }
 
+// Y adds an AND conector to the stament where is called. Its helpful when used with In()
+//
+// # Example
+//
+//	Update("client").Set("status = 0").Where("country = ?", "CL").Y().In("status", "", 1, 2, 3, 4)
+//
+// Produces: UPDATE client SET status = 0 WHERE country = ? AND status IN (?, ?, ?, ?)
+func (up *SelectStm) Y() *SelectStm {
+	up.clause("AND", "")
+	return up
+}
+
 func (st *SelectStm) Or(expr string, p ...any) *SelectStm {
 	st.clause("OR", expr, p...)
 	return st
@@ -275,6 +287,13 @@ func (st *SelectStm) LikeIf(cond bool, expr string, p ...any) *SelectStm {
 func (st *SelectStm) In(expr string, p ...any) *SelectStm {
 	st.clause("IN (", expr+")", p...)
 	return st
+}
+
+// InArgs adds an In clause to the stament automatically setting the positional parameters of the query based on the
+// passed parameters
+func (up *SelectStm) InArgs(value string, p ...any) *SelectStm {
+	up.stament.inArgs(value, p...)
+	return up
 }
 
 // GroupBy adds a GROUP BY clause to the query

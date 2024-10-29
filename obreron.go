@@ -3,6 +3,7 @@ package obreron
 import (
 	"bytes"
 	"slices"
+	"strings"
 	"sync"
 	"unsafe"
 )
@@ -45,6 +46,12 @@ type stament struct {
 
 func (st *stament) clause(clause, expr string, p ...any) {
 	st.add(st.lastPos, clause, expr, p...)
+}
+
+func (st *stament) inArgs(value string, p ...any) {
+	l := len(p)
+	expr := strings.Repeat("?, ", l)[:l*3-2]
+	st.clause(value+" IN ("+expr+")", "", p...)
 }
 
 func (st *stament) where(cond string, p ...any) {

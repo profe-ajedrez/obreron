@@ -308,6 +308,12 @@ func selectTestCases() (cases []struct {
 			tc:             Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("status").In("0, 1, 2, 3"),
 		},
 		{
+			name:           "columns - where in",
+			expected:       "SELECT a1, a2, a3 FROM client WHERE 1 = 1 AND status IN (?, ?, ?, ?)",
+			expectedParams: []any{0, 1, 2, 3},
+			tc:             Select().Col("a1, a2, a3").From("client").Where("1 = 1").Y().InArgs("status", 0, 1, 2, 3),
+		},
+		{
 			name:           "columns - where like",
 			expected:       "SELECT a1, a2, a3 FROM client WHERE 1 = 1 AND city LIKE '%ago%'",
 			expectedParams: nil,
@@ -319,13 +325,13 @@ func selectTestCases() (cases []struct {
 }
 
 func deleteTestCases() []struct {
-	tc             *DeleteStament
+	tc             *DeleteStm
 	name           string
 	expected       string
 	expectedParams []any
 } {
 	return []struct {
-		tc             *DeleteStament
+		tc             *DeleteStm
 		name           string
 		expected       string
 		expectedParams []any
@@ -351,6 +357,15 @@ func deleteTestCases() []struct {
 				Where("client_id = 100").
 				And("estado_cliente = 0").
 				Y().In("regime_cliente", "'G01','G02', ?", "'G03'").And("a").LikeIf(true, "'%ago%'").ClauseIf(true, "-- Comment\n", ""),
+		},
+		{
+			name:           "del where conditions",
+			expected:       "DELETE FROM client WHERE client_id = 100 AND estado_cliente = 0 AND regime_cliente IN (?, ?, ?) AND a LIKE '%ago%' -- Comment\n",
+			expectedParams: []any{"G01", "G02", "G03"},
+			tc: Delete().From("client").
+				Where("client_id = 100").
+				And("estado_cliente = 0").
+				Y().InArgs("regime_cliente", "G01", "G02", "G03").And("a").LikeIf(true, "'%ago%'").ClauseIf(true, "-- Comment\n", ""),
 		},
 		{
 			name:           "del where conditions limit",
@@ -400,13 +415,13 @@ func deleteTestCases() []struct {
 }
 
 func updateTestCases() (tcs []struct {
-	tc             *UpdateStament
+	tc             *UpdateStm
 	name           string
 	expected       string
 	expectedParams []any
 }) {
 	tcs = append(tcs, []struct {
-		tc             *UpdateStament
+		tc             *UpdateStm
 		name           string
 		expected       string
 		expectedParams []any
@@ -416,6 +431,24 @@ func updateTestCases() (tcs []struct {
 			expected:       "UPDATE client SET status = 0",
 			expectedParams: nil,
 			tc:             Update("client").Set("status = 0"),
+		},
+		{
+			name:           "update simple",
+			expected:       "UPDATE client SET status = 0, name = ?",
+			expectedParams: []any{"stitch"},
+			tc:             Update("client").Set("status = 0").Set("name = ?", "stitch"),
+		},
+		{
+			name:           "update simple",
+			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN (?, ?, ?, ?)",
+			expectedParams: []any{"CL", 1, 2, 3, 4},
+			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().In("status", "?, ?, ?, ?", 1, 2, 3, 4),
+		},
+		{
+			name:           "update simple",
+			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN (?, ?, ?, ?)",
+			expectedParams: []any{"CL", 1, 2, 3, 4},
+			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1, 2, 3, 4),
 		},
 		{
 			name:           "update where",

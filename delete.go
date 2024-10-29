@@ -1,11 +1,11 @@
 package obreron
 
-type DeleteStament struct {
+type DeleteStm struct {
 	*stament
 }
 
-func Delete() *DeleteStament {
-	d := &DeleteStament{
+func Delete() *DeleteStm {
+	d := &DeleteStm{
 		stament: pool.New().(*stament),
 	}
 
@@ -14,82 +14,89 @@ func Delete() *DeleteStament {
 	return d
 }
 
-func (dst *DeleteStament) From(source string) *DeleteStament {
+func (dst *DeleteStm) From(source string) *DeleteStm {
 	dst.add(fromS, "FROM", source)
 	return dst
 }
 
-func (dst *DeleteStament) Where(cond string, p ...any) *DeleteStament {
+func (dst *DeleteStm) Where(cond string, p ...any) *DeleteStm {
 	dst.where(cond, p...)
 	return dst
 }
 
-func (dst *DeleteStament) Y() *DeleteStament {
+func (dst *DeleteStm) Y() *DeleteStm {
 	dst.clause("AND", "")
 	return dst
 }
 
-func (dst *DeleteStament) And(expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) And(expr string, p ...any) *DeleteStm {
 	dst.clause("AND", expr, p...)
 	return dst
 }
 
-func (dst *DeleteStament) AndIf(cond bool, expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) AndIf(cond bool, expr string, p ...any) *DeleteStm {
 	if cond {
 		dst.clause("AND", expr, p...)
 	}
 	return dst
 }
 
-func (dst *DeleteStament) Or(expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) Or(expr string, p ...any) *DeleteStm {
 	dst.clause("OR", expr, p...)
 	return dst
 }
 
-func (dst *DeleteStament) OrIf(cond bool, expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) OrIf(cond bool, expr string, p ...any) *DeleteStm {
 	if cond {
 		dst.clause("OR", expr, p...)
 	}
 	return dst
 }
 
-func (dst *DeleteStament) Like(expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) Like(expr string, p ...any) *DeleteStm {
 	dst.clause("LIKE", expr, p...)
 	return dst
 }
 
-func (dst *DeleteStament) LikeIf(cond bool, expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) LikeIf(cond bool, expr string, p ...any) *DeleteStm {
 	if cond {
 		dst.Like(expr, p...)
 	}
 	return dst
 }
 
-func (dst *DeleteStament) In(value, expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) In(value, expr string, p ...any) *DeleteStm {
 	dst.clause(value+" IN ("+expr+")", "", p...)
 	return dst
 }
 
-func (dst *DeleteStament) Close() {
+// InArgs adds an In clause to the stament automatically setting the positional parameters of the query based on the
+// passed parameters
+func (up *DeleteStm) InArgs(value string, p ...any) *DeleteStm {
+	up.stament.inArgs(value, p...)
+	return up
+}
+
+func (dst *DeleteStm) Close() {
 	closeStament(dst.stament)
 }
 
-func (dst *DeleteStament) OrderBy(expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) OrderBy(expr string, p ...any) *DeleteStm {
 	dst.add(limitS, "ORDER BY", expr, p...)
 	return dst
 }
 
-func (dst *DeleteStament) Limit(limit int) *DeleteStament {
+func (dst *DeleteStm) Limit(limit int) *DeleteStm {
 	dst.add(limitS, "LIMIT", "?", limit)
 	return dst
 }
 
-func (dst *DeleteStament) Clause(clause, expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) Clause(clause, expr string, p ...any) *DeleteStm {
 	dst.add(dst.lastPos, clause, expr, p...)
 	return dst
 }
 
-func (dst *DeleteStament) ClauseIf(cond bool, clause, expr string, p ...any) *DeleteStament {
+func (dst *DeleteStm) ClauseIf(cond bool, clause, expr string, p ...any) *DeleteStm {
 	if cond {
 		dst.Clause(clause, expr, p...)
 	}

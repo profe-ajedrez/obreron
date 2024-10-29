@@ -106,7 +106,7 @@ func (in *InsertStament) ColIf(cond bool, col string, p ...any) *InsertStament {
 //
 // # Example
 //
-// ins := Insert().Into("courses").ColSelectIf(true, "name, location, gid", Select().Col("name, location, 1").From("courses").Where("cid = 2")).ColSelectIf(false, "last_name, last_location, grid", Select().Col("last_name, last_location, 11").From("courses").Where("cid = 2")),
+// ins := Insert().Into("courses").ColSelectIf(true, "name, location, gid", Select().Col("name, location, 1").From("courses").Where("cid = 2")).ColSelectIf(false, "last_name, last_location, grid", Select().Col("last_name, last_location, 11").From("courses").Where("cid = 2"))
 //
 // query, p := ins.Build()
 //
