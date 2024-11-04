@@ -1,10 +1,10 @@
 # Obreron
-![Coverage](https://img.shields.io/badge/Coverage-99.7%25-brightgreen)
 
 Fast and cheap sql builder.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/profe-ajedrez/obreron/v2.svg)](https://pkg.go.dev/github.com/profe-ajedrez/obreron/v2)
 [![Go Report Card](https://goreportcard.com/badge/github.com/profe-ajedrez/obreron/v2)](https://goreportcard.com/report/github.com/profe-ajedrez/obreron/v2)
+[![Go Coverage](https://github.com/profe-ajedrez/obreron/wiki/coverage.svg)](https://raw.githack.com/wiki/profe-ajedrez/obreron/coverage.html)
 
 ## Supported Dialects
 
@@ -25,6 +25,8 @@ $ go get github.com/profe-ajedrez/obreron/v2
 ```
 
 ## Use
+
+You could see the [examples](examples/) directory.
 
 Import package
 
@@ -244,5 +246,3 @@ query, params := v2.Insert().Clause("IGNORE", "")
 ```
 
 The `Clause` method always will inject the clause after the last uses building command
-
-
