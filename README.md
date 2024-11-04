@@ -246,5 +246,3 @@ query, params := v2.Insert().Clause("IGNORE", "")
 ```
 
 The `Clause` method always will inject the clause after the last uses building command
-
-
