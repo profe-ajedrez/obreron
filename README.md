@@ -1,5 +1,5 @@
 # Obreron
-![Coverage](https://img.shields.io/badge/Coverage-99.7%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-95.1%25-brightgreen)
 
 Fast and cheap sql builder.
 
