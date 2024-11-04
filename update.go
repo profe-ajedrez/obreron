@@ -129,6 +129,7 @@ func (up *UpdateStm) Or(expr string, p ...any) *UpdateStm {
 	return up
 }
 
+// OrIf adds an Or connector with eventual parameters to the stament where is called only when cond parameter value is true
 func (up *UpdateStm) OrIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.clause("OR", expr, p...)
@@ -136,11 +137,31 @@ func (up *UpdateStm) OrIf(cond bool, expr string, p ...any) *UpdateStm {
 	return up
 }
 
+// Like adds a LIKE clause to the query after the last added clause
+//
+//	# Example
+//
+//	Update("items").
+//	Set("items.retail = items.retail * 0.9").
+//	Set("a = 2").
+//	Where("discounted.markup >= 1.3").
+//	And("colX").
+//	Like("'%ago%'")
 func (up *UpdateStm) Like(expr string, p ...any) *UpdateStm {
 	up.clause("LIKE", expr, p...)
 	return up
 }
 
+// LikeIf adds a LIKE clause to the query after the last added clause only when cond parameter value is true
+//
+//	# Example
+//
+//	Update("items").
+//	Set("items.retail = items.retail * 0.9").
+//	Set("a = 2").
+//	Where("discounted.markup >= 1.3").
+//	And("colX").
+//	Like("'%ago%'")
 func (up *UpdateStm) LikeIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.clause("LIKE", expr, p...)
@@ -148,6 +169,14 @@ func (up *UpdateStm) LikeIf(cond bool, expr string, p ...any) *UpdateStm {
 	return up
 }
 
+// In adds a IN clause to the query after the las clause added
+//
+// # Example
+//
+//	Update("client").
+//	Set("status = 0").
+//	Where("country = ?", "CL").
+//	Y().In("status", "?, ?, ?, ?", 1, 2, 3, 4)
 func (up *UpdateStm) In(value, expr string, p ...any) *UpdateStm {
 	up.clause(value+" IN ("+expr+")", "", p...)
 	return up
@@ -193,6 +222,17 @@ func (up *UpdateStm) ClauseIf(cond bool, clause, expr string, p ...any) *UpdateS
 	return up
 }
 
+// Join adds a relation to the query in the form of an inner join
+//
+// # Example
+//
+//	Update("business AS b").
+//	Join("business_geocode AS g").On("b.business_id = g.business_id").
+//	Set("b.mapx = g.latitude, b.mapy = g.longitude").
+//	Where("(b.mapx = '' or b.mapx = 0)").And("g.latitude > 0")
+//
+//	OUTPUT:
+//	UPDATE business AS b JOIN business_geocode AS g ON b.business_id = g.business_id SET b.mapx = g.latitude, b.mapy = g.longitude WHERE (b.mapx = '' or b.mapx = 0) AND g.latitude > 0 AND 3 = 3
 func (up *UpdateStm) Join(expr string, p ...any) *UpdateStm {
 	up.add(updateS, "JOIN", expr, p...)
 	return up

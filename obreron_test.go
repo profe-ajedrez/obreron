@@ -508,6 +508,17 @@ func updateTestCases() (tcs []struct {
 				Set("b.mapx = g.latitude, b.mapy = g.longitude").
 				Where("(b.mapx = '' or b.mapx = 0)").And("g.latitude > 0").ClauseIf(true, "AND", "3 = 3"),
 		},
+		{
+			tc: Update("items").
+				Set("items.retail = items.retail * 0.9").
+				Set("a = 2").
+				Where("discounted.markup >= 1.3").
+				And("colX").
+				Like("'%ago%'"),
+			name:           "",
+			expected:       "UPDATE items SET items.retail = items.retail * 0.9, a = 2 WHERE discounted.markup >= 1.3 AND colX LIKE '%ago%'",
+			expectedParams: []any{},
+		},
 	}...)
 	return tcs
 }
