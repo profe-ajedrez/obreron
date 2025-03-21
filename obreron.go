@@ -14,7 +14,7 @@ var pool = &sync.Pool{
 	},
 }
 
-func closeStament(st *stament) {
+func CloseStament(st *stament) {
 	if st == nil {
 		return
 	}
@@ -23,8 +23,8 @@ func closeStament(st *stament) {
 		st.p[i] = nil
 	}
 
-	st.p = st.p[:0]
-	st.s = st.s[:0]
+	st.p = make([]any, 0)
+	st.s = make([]segment, 0)
 	st.lastPos = 0
 	st.grouped = false
 	st.firstCol = true
@@ -32,8 +32,6 @@ func closeStament(st *stament) {
 	st.buff.Reset()
 
 	pool.Put(st)
-
-	st = nil
 }
 
 type segment struct {

@@ -229,5 +229,5 @@ func posParams(i int, in *InsertStament, b *bytes.Buffer, buf []byte) {
 
 // Close free resources used by the stament
 func (in *InsertStament) Close() {
-	closeStament(in.stament)
+	CloseStament(in.stament)
 }

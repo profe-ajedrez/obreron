@@ -197,7 +197,7 @@ func (up *UpdateStm) InArgs(value string, p ...any) *UpdateStm {
 
 // Close frees up the resources used in the stament
 func (up *UpdateStm) Close() {
-	closeStament(up.stament)
+	CloseStament(up.stament)
 }
 
 func (up *UpdateStm) OrderBy(expr string, p ...any) *UpdateStm {

@@ -99,7 +99,7 @@ func (dst *DeleteStm) InArgs(value string, p ...any) *DeleteStm {
 // Close releases the statement back to the pool.
 // After calling Close, the statement should not be used.
 func (dst *DeleteStm) Close() {
-	closeStament(dst.stament)
+	CloseStament(dst.stament)
 }
 
 func (dst *DeleteStm) OrderBy(expr string, p ...any) *DeleteStm {

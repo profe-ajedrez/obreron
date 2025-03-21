@@ -6,6 +6,10 @@ type SelectStm struct {
 	*stament
 }
 
+func CloseSelect(s *SelectStm) {
+	CloseStament(s.stament)
+}
+
 // Select Returns a select stament
 //
 // # Example
@@ -23,7 +27,7 @@ func Select() *SelectStm {
 
 // Close release the resources used by the stament
 func (st *SelectStm) Close() {
-	closeStament(st.stament)
+	CloseStament(st.stament)
 }
 
 // Col adds a column to the select stament.
