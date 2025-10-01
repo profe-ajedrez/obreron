@@ -23,6 +23,10 @@ func Update(table string) *UpdateStm {
 	return d
 }
 
+func CloseUpdate(s *UpdateStm) {
+	CloseStament(s.stament)
+}
+
 // ColSelect is a helper method which provides a way to build an update (select ...) stament
 //
 // # Example
