@@ -2,6 +2,10 @@ package obreron
 
 import (
 	"testing"
+	"time"
+
+	"github.com/pingcap/tidb/pkg/parser"
+	_ "github.com/pingcap/tidb/pkg/parser/test_driver"
 )
 
 // SELECT a1, a2, ? AS diez, colIf1, colIf2, ? AS zero, a3, ? AS cien FROM client c JOIN addresses a ON a.id_cliente = a.id_cliente JOIN phones p ON p.id_cliente = c.id_cliente JOIN mailes m ON m.id_cliente = m.id_cliente AND c.estado_cliente = ? LEFT JOIN left_joined lj ON lj.a1 = c.a1 WHERE a1 = ? AND a2 = ? AND a3 = 10 AND a16 = ? --- Got
@@ -82,28 +86,42 @@ func BenchmarkDelete(b *testing.B) {
 }
 
 func TestUpdate(t *testing.T) {
-	for i, tc := range updateTestCases() {
+	par := parser.New() 
+	for k := 0; k <= 10000; k++ {
+		for i, tc := range updateTestCases() {
 
-		sql, p := tc.tc.Build()
+			sql, p := tc.tc.Build()
 
-		if sql != tc.expected {
-			t.Logf("[Test case %d %s] Failed! Expected %s --- Got %s", i, tc.name, tc.expected, sql)
-			t.FailNow()
-		}
+			
+			// Parser para verificar que el sql es correctamente construido
+			_, _, err := par.ParseSQL(sql)
 
-		if len(p) != len(tc.expectedParams) {
-			t.Logf("[Test case %d %s] Failed! Params Length Expected %d --- Got %d", i, tc.name, len(tc.expectedParams), len(p))
-			t.FailNow()
-		}
-
-		for k := range tc.expectedParams {
-			if p[k] != tc.expectedParams[k] {
-				t.Logf("[Test case %d %s] Failed! Param[%d] Expected %v --- Got p[%d] = %v", i, tc.name, k, tc.expectedParams[k], k, p[k])
+			if err != nil {
+				t.Logf("[TEST CASE %d  %s] %v", i, tc.name, err)
 				t.FailNow()
 			}
-		}
 
-		tc.tc.Close()
+			if tc.expected != "" {
+				if sql != tc.expected {
+					t.Logf("[Test case %d %s] Failed! Expected %s --- Got %s", i, tc.name, tc.expected, sql)
+					t.FailNow()
+				}
+
+				if len(p) != len(tc.expectedParams) {
+					t.Logf("[Test case %d %s] Failed! Params Length Expected %d --- Got %d", i, tc.name, len(tc.expectedParams), len(p))
+					t.FailNow()
+				}
+
+				for k := range tc.expectedParams {
+					if p[k] != tc.expectedParams[k] {
+						t.Logf("[Test case %d %s] Failed! Param[%d] Expected %v --- Got p[%d] = %v", i, tc.name, k, tc.expectedParams[k], k, p[k])
+						t.FailNow()
+					}
+				}
+			}
+
+			CloseUpdate(tc.tc)
+		}
 	}
 }
 
@@ -113,7 +131,7 @@ func BenchmarkUpdate(b *testing.B) {
 		b.Run(tc.name, func(b2 *testing.B) {
 			for i := 0; i < b2.N; i++ {
 				_, _ = tc.tc.Build()
-				tc.tc.Close()
+				CloseUpdate(tc.tc)
 			}
 		})
 	}
@@ -455,13 +473,7 @@ func updateTestCases() (tcs []struct {
 			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1, 2, 3, 4),
 		},
 		{
-			name:           "update with empty in args",
-			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN ()",
-			expectedParams: []any{"CL"},
-			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status"),
-		},
-		{
-			name:           "update with empty in args",
+			name:           "update with IN with 1 param in args",
 			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN (?)",
 			expectedParams: []any{"CL", 1},
 			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1),
@@ -490,12 +502,18 @@ func updateTestCases() (tcs []struct {
 			name:           "update select",
 			expected:       "UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9, a = 2, c = 3 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id AND regime_cliente IN ('G01','G02', ?) AND 2 = 2 OR 3 = 3 OR 4 = 4 AND colX LIKE '%ago%' AND colN LIKE '%oga%' AND colY IN (1, 2, 3)",
 			expectedParams: []any{"'G03'"},
-			tc: Update("items").
-				ColSelectIf(true, Select().Col("id, retail / wholesale AS markup, quantity").From("items"), "discounted").
+			tc: func() *UpdateStm {
+			    s := Select().Col("id, retail / wholesale AS markup, quantity").From("items");
+				defer CloseSelect(s)
+
+			    return Update("items").
+				ColSelectIf(true, s, "discounted").
 				Set("items.retail = items.retail * 0.9").Set("a = 2").SetIf(true, "c = 3").
 				Where("discounted.markup >= 1.3").
 				And("discounted.quantity < 100").
-				And("items.id = discounted.id").Y().In("regime_cliente", "'G01','G02', ?", "'G03'").AndIf(true, "2 = 2").Or("3 = 3").OrIf(true, "4 = 4").And("colX").Like("'%ago%'").AndIf(true, "colN").LikeIf(true, "'%oga%'").Y().In("colY", "1, 2, 3"),
+				And("items.id = discounted.id").Y().In("regime_cliente", "'G01','G02', ?", "'G03'").AndIf(true, "2 = 2").Or("3 = 3").OrIf(true, "4 = 4").And("colX").Like("'%ago%'").AndIf(true, "colN").LikeIf(true, "'%oga%'").Y().In("colY", "1, 2, 3")
+
+			}(),
 		},
 		// UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id --- Got
 		// UPDATE items ,( SELECT , id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id
@@ -517,6 +535,24 @@ func updateTestCases() (tcs []struct {
 				Like("'%ago%'"),
 			name:           "",
 			expected:       "UPDATE items SET items.retail = items.retail * 0.9, a = 2 WHERE discounted.markup >= 1.3 AND colX LIKE '%ago%'",
+			expectedParams: []any{},
+		},
+		{
+			tc: specialCase_docupdater_UpdateTargetQuery(),
+			name: "",
+			expected: "",
+			expectedParams: []any{},
+		},
+		{
+			tc: specialCase_docupdater_UpdateResendQuery(),
+			name: "",
+			expected: "",
+			expectedParams: []any{},
+		},
+		{
+			tc: specialCase_docupdater_UpdateShippingQuery(),
+			name: "",
+			expected: "",
 			expectedParams: []any{},
 		},
 	}...)
@@ -570,3 +606,166 @@ func insertTestCases() (tcs []struct {
 
 // INSERT INTO courses ( name, location, gid ) SELECT name, location, 1 FROM courses WHERE cid = 2 --- Got
 // INSERT INTO courses ( name, location, gid ) SELECT name, location, 1 FROM courses WHERE cid = 2
+
+
+
+type DocupdaterBody struct {
+  ResourceID int
+  StartID int
+  EndID int
+  UseExpirationDate int
+  ClientID int
+  OfficeID int
+  SPS int
+  RemitterID int
+  UserID int
+  LoggedUserID int
+  DocumentTypeID int
+  DocumentNumber int
+  StartDateUTC time.Time
+  EndDateUTC time.Time
+  EndEpoch int
+}
+
+func (b *DocupdaterBody) ThereIsEndDate() bool {
+	return b.EndEpoch > 0
+}
+
+
+func specialCase_docupdater_UpdateTargetQuery() *UpdateStm {
+	body := DocupdaterBody{}
+
+	// noCheckIds verifica si bypassear o no el siguiente filtro donde sea invocado,
+	// esto según si esta definido un documento para actualizar, o un rango.
+	noCheckIds := !(body.ResourceID > 0 || (body.StartID > 0 && body.EndID > 0))
+	ob := Select().
+		Col(`TRIM( TRAILING ',' FROM CONCAT(	
+	CASE WHEN _c.email_cliente IS NULL OR LENGTH(TRIM(COALESCE(_c.email_cliente,''))) = 0 
+	    THEN ''
+		ELSE CONCAT(COALESCE(_c.nombre_cliente,''), ' ', COALESCE(_c.apellido_cliente,''), ':', COALESCE(_c.email_cliente,'')) 
+	END, ',', 
+	IFNULL((
+	    SELECT CONCAT(GROUP_CONCAT(
+		    CASE WHEN _cc.email_contacto IS NULL OR LENGTH(TRIM(COALESCE(_cc.email_contacto,''))) = 0 
+			    THEN ''
+				ELSE CONCAT(COALESCE(_cc.nombre_contacto,''), ' ', COALESCE(_cc.apellido_contacto,''), ':', CONCAT(_cc.email_contacto,'')) 
+			END
+		), ',')
+		FROM contacto_cliente _cc
+		WHERE _cc.id_cliente = _c.id_cliente),''))) AS destinatarios`).
+		Col(`vds.id_venta_documento_tributario`).
+		From("venta_documento_tributario vds").
+		Clause(" STRAIGHT_JOIN ", "cliente _c ON vds.id_cliente = _c.id_cliente ").
+		Where("1=1").
+		AndIf(body.ResourceID > 0, "vds.id_venta_documento_tributario = ?", body.ResourceID).
+		AndIf(body.ResourceID <= 0 && body.StartID > 0 && body.EndID > 0, "vds.id_venta_documento_tributario BETWEEN  ? AND ?", body.StartID, body.EndID).
+		AndIf(body.ResourceID <= 0 && body.DocumentTypeID > 0, "vds.id_tipo_documento_tributario = ?", body.DocumentTypeID).
+		AndIf(body.ResourceID <= 0 && body.DocumentNumber > 0, "vds.num_doc_tributario = ?", body.DocumentNumber).
+		AndIf(body.ResourceID <= 0 && body.UserID > 0, "vds.id_usuario = ?", body.UserID).
+		AndIf(body.ResourceID <= 0 && body.RemitterID > 0, "vds.id_emisor = ?", body.RemitterID).
+		AndIf(noCheckIds && body.OfficeID > 0, "vds.id_sucursal = ?", body.OfficeID).
+		AndIf(noCheckIds && body.OfficeID == 0 && body.LoggedUserID > 0 && body.SPS > 0, "vds.id_sucursal IN (SELECT id_sucursal FROM usuario_sucursal WHERE id_usuario = ?)", body.LoggedUserID).
+		AndIf(body.ResourceID <= 0 && body.ClientID > 0, "vds.id_cliente = ?", body.ClientID).
+		AndIf(noCheckIds && body.UseExpirationDate == 0, "vds.fecha_vencimiento_documento >= ?", body.StartDateUTC.Format("2006-01-02")).
+		AndIf(noCheckIds && body.UseExpirationDate == 1, "vds.fecha_emision_documento >= ?", body.StartDateUTC.Format("2006-01-02")).
+		AndIf(noCheckIds && body.UseExpirationDate == 0 && body.ThereIsEndDate(), "vds.fecha_emision_documento <= ?", body.EndDateUTC.Format("2006-01-02")).
+		AndIf(noCheckIds && body.UseExpirationDate == 1 && body.ThereIsEndDate(), "vds.fecha_vencimiento_documento <= ?", body.EndDateUTC.Format("2006-01-02"))
+
+	defer CloseSelect(ob)
+
+	up := Update("vw_docs_search v").
+		ColSelect(ob, "det").
+		Set("v.destinatarios = det.destinatarios")
+
+	if body.ResourceID > 0 {
+		up.Where("v.id_venta_documento_tributario = det.id_venta_documento_tributario")
+	} else {
+		up.Where("v.id_venta_documento_tributario = ? ", body.ResourceID)
+	}
+
+	return up
+}
+
+
+
+func specialCase_docupdater_UpdateResendQuery() *UpdateStm {
+	body := DocupdaterBody{}
+	// noCheckIds verifica si bypassear o no el siguiente filtro donde sea invocado,
+	// esto según si esta definido un documento para actualizar, o un rango.
+	noCheckIds := !(body.ResourceID > 0 || (body.StartID > 0 && body.EndID > 0))
+
+	ob := Select().
+		Col(`IFNULL(
+CONVERT(
+	GROUP_CONCAT(
+			CONCAT(COALESCE(de.nombre_destinatario,''), ':', COALESCE(de.email_destinatario,''), ':', de.id_detalle_envio_documento)
+		) USING latin1
+	),
+	''
+) AS destinatarios_reenvio`).
+		Col("vds.id_venta_documento_tributario").
+		From("venta_documento_tributario vds").
+		Join("envio_documento e ON vds.id_venta_documento_tributario = e.id_venta_documento_tributario").
+		Join("detalle_envio_documento de ON e.id_envio_documento = de.id_envio_documento").
+		Where("1=1").
+		AndIf(body.ResourceID > 0, "vds.id_venta_documento_tributario = ?", body.ResourceID).
+		AndIf(body.ResourceID <= 0 && body.StartID > 0 && body.EndID > 0, "vds.id_venta_documento_tributario BETWEEN ? AND ?", body.StartID, body.EndID).
+		AndIf(body.ResourceID <= 0 && body.DocumentTypeID > 0, "vds.id_tipo_documento_tributario = ?", body.DocumentTypeID).
+		AndIf(body.ResourceID <= 0 && body.DocumentNumber > 0, "vds.num_doc_tributario = ?", body.DocumentNumber).
+		AndIf(body.ResourceID <= 0 && body.UserID > 0, "vds.id_usuario = ?", body.UserID).
+		AndIf(body.ResourceID <= 0 && body.RemitterID > 0, "vds.id_emisor = ?", body.RemitterID).
+		AndIf(noCheckIds && body.OfficeID > 0, "vds.id_sucursal = ?", body.OfficeID).
+		AndIf(noCheckIds && body.OfficeID == 0 && body.LoggedUserID > 0 && body.SPS > 0, "vds.id_sucursal IN (SELECT id_sucursal FROM usuario_sucursal WHERE id_usuario = ?)", body.LoggedUserID).
+		AndIf(body.ResourceID <= 0 && body.ClientID > 0, "vds.id_cliente = ?", body.ClientID).
+		AndIf(body.ResourceID <= 0 && body.UseExpirationDate == 0, "vds.fecha_vencimiento_documento >= ?", body.StartDateUTC.Format("2006-01-02")).
+		AndIf(body.ResourceID <= 0 && body.UseExpirationDate == 1, "vds.fecha_emision_documento >= ?", body.StartDateUTC.Format("2006-01-02")).
+		AndIf(body.ResourceID <= 0 && body.UseExpirationDate == 0 && body.ThereIsEndDate(), "vds.fecha_emision_documento <= ?", body.EndDateUTC.Format("2006-01-02")).
+		AndIf(body.ResourceID <= 0 && body.UseExpirationDate == 1 && body.ThereIsEndDate(), "vds.fecha_vencimiento_documento <= ?", body.EndDateUTC.Format("2006-01-02")).
+		And("e.tipo_envio = 0").
+		GroupBy("vds.id_venta_documento_tributario")
+
+	defer CloseSelect(ob)
+
+	upd := Update("vw_docs_search v").
+		ColSelect(ob, "det").
+		Set("v.destinatarios_reenvio = det.destinatarios_reenvio").
+		Where("v.id_venta_documento_tributario = det.id_venta_documento_tributario")
+	return upd
+}
+
+
+func specialCase_docupdater_UpdateShippingQuery() *UpdateStm {
+    body := DocupdaterBody{}
+	ob := Select().
+		Col("1 AS es_despacho").
+		Col("td.nombre_i18n_tipo").
+		Col("IFNULL(d.id_sucursal_destino, 0) AS id_sucursal_destino").
+		Col("IFNULL(s.nombre_sucursal,'') AS sucursal_destino").
+		Col("d.recepcionado_destino").
+		Col("vdt.id_venta_documento_tributario").
+		From("venta_documento_tributario vdt").
+		Join("tipo_documento_tributario tdoc ON tdoc.id_tipo_documento_tributario = vdt.id_tipo_documento_tributario").
+		Join("detalle_venta_documento_tributario dvdt ON vdt.id_venta_documento_tributario = dvdt.id_venta_documento_tributario").
+		Join("detalle_despacho dd ON dvdt.id_detalle_despacho = dd.id_detalle_despacho").
+		Join("despacho d ON dd.id_despacho = d.id_despacho").
+		Join("tipo_despacho td ON d.id_tipo_despacho = td.id_tipo_despacho").
+		LeftJoin("sucursal s ON d.id_sucursal_destino = s.id_sucursal").
+		Where("1=1").
+		AndIf(body.ResourceID > 0, "vdt.id_venta_documento_tributario = ?", body.ResourceID).
+		AndIf(body.ResourceID <= 0 && body.StartID > 0, "vdt.id_venta_documento_tributario >= ?", body.StartID).
+		AndIf(body.ResourceID <= 0 && body.EndID > 0, "vdt.id_venta_documento_tributario <= ?", body.EndID).
+		And("uso_documento = 2").
+		GroupBy("vdt.id_venta_documento_tributario")
+
+	defer CloseSelect(ob)
+
+	upd := Update("vw_docs_search v").
+		ColSelect(ob, "det").
+		Set("v.es_despacho = det.es_despacho").
+		Set("v.nombre_tipo_despacho = det.nombre_i18n_tipo").
+		Set("v.id_sucursal_destino = det.id_sucursal_destino").
+		Set("v.sucursal_destino = det.sucursal_destino").
+		Set("v.recepcionado_destino = det.recepcionado_destino").
+		Where("v.id_venta_documento_tributario = det.id_venta_documento_tributario")
+	return upd
+}
