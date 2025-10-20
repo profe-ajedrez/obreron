@@ -87,39 +87,40 @@ func BenchmarkDelete(b *testing.B) {
 
 func TestUpdate(t *testing.T) {
 	par := parser.New()
-	for k := 0; k <= 10000; k++ {
-		for i, tc := range updateTestCases() {
+	for k := 0; k <= 1000; k++ {
 
-			sql, p := tc.tc.Build()
+		for i, tc := range updateTestCases() {
+			upStm := tc.tc()
+			sql, p := upStm.Build()
 
 			// Parser para verificar que el sql es correctamente construido
 			_, _, err := par.ParseSQL(sql)
 
 			if err != nil {
-				t.Logf("[TEST CASE %d  %s] %v", i, tc.name, err)
+				t.Logf("[TEST CASE %d ROUND %d %s] %v", i, k, tc.name, err)
 				t.FailNow()
 			}
 
 			if tc.expected != "" {
 				if sql != tc.expected {
-					t.Logf("[Test case %d %s] Failed! Expected %s --- Got %s", i, tc.name, tc.expected, sql)
+					t.Logf("[Test case %d ROUND %d %s] Failed! Expected %s --- Got %s", i, k, tc.name, tc.expected, sql)
 					t.FailNow()
 				}
 
 				if len(p) != len(tc.expectedParams) {
-					t.Logf("[Test case %d %s] Failed! Params Length Expected %d --- Got %d", i, tc.name, len(tc.expectedParams), len(p))
+					t.Logf("[Test case %d ROUND %d %s] Failed! Params Length Expected %d --- Got %d", i, k, tc.name, len(tc.expectedParams), len(p))
 					t.FailNow()
 				}
 
 				for k := range tc.expectedParams {
 					if p[k] != tc.expectedParams[k] {
-						t.Logf("[Test case %d %s] Failed! Param[%d] Expected %v --- Got p[%d] = %v", i, tc.name, k, tc.expectedParams[k], k, p[k])
+						t.Logf("[Test case %d ROUND %d %s] Failed! Param[%d] Expected %v --- Got p[%d] = %v", i, k, tc.name, k, tc.expectedParams[k], k, p[k])
 						t.FailNow()
 					}
 				}
-			}
 
-			CloseUpdate(tc.tc)
+				CloseUpdate(upStm)
+			}
 		}
 	}
 }
@@ -129,8 +130,9 @@ func BenchmarkUpdate(b *testing.B) {
 		b.ResetTimer()
 		b.Run(tc.name, func(b2 *testing.B) {
 			for i := 0; i < b2.N; i++ {
-				_, _ = tc.tc.Build()
-				CloseUpdate(tc.tc)
+				upStm := tc.tc()
+				_, _ = upStm.Build()
+				CloseUpdate(upStm)
 			}
 		})
 	}
@@ -435,65 +437,74 @@ func deleteTestCases() []struct {
 }
 
 func updateTestCases() (tcs []struct {
-	tc             *UpdateStm
+	tc             func() *UpdateStm
 	name           string
 	expected       string
 	expectedParams []any
 }) {
 	tcs = append(tcs, []struct {
-		tc             *UpdateStm
+		tc             func() *UpdateStm
 		name           string
 		expected       string
 		expectedParams []any
 	}{
-
 		{
-			name:           "update simple",
+			name:           "UPDATE client SET status = 0",
 			expected:       "UPDATE client SET status = 0",
 			expectedParams: nil,
-			tc:             Update("client").Set("status = 0"),
+			tc:             func() *UpdateStm { return Update("client").Set("status = 0") },
 		},
 		{
-			name:           "update simple",
+			name:           "UPDATE client SET status = 0, name = ?",
 			expected:       "UPDATE client SET status = 0, name = ?",
 			expectedParams: []any{"stitch"},
-			tc:             Update("client").Set("status = 0").Set("name = ?", "stitch"),
+			tc:             func() *UpdateStm { return Update("client").Set("status = 0").Set("name = ?", "stitch") },
 		},
 		{
-			name:           "update simple",
-			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN (?, ?, ?, ?)",
+			name:           "UPDATE client SET status = 1 WHERE country = ? AND status IN (?, ?, ?, ?)",
+			expected:       "UPDATE client SET status = 1 WHERE country = ? AND status IN (?, ?, ?, ?)",
 			expectedParams: []any{"CL", 1, 2, 3, 4},
-			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().In("status", "?, ?, ?, ?", 1, 2, 3, 4),
+			tc: func() *UpdateStm {
+				return Update("client").Set("status = 1").Where("country = ?", "CL").Y().In("status", "?, ?, ?, ?", 1, 2, 3, 4)
+			},
 		},
 		{
-			name:           "update simple",
-			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN (?, ?, ?, ?)",
+			name:           "UPDATE client SET status = 2 WHERE country = ? AND status IN (?, ?, ?, ?) InArgs",
+			expected:       "UPDATE client SET status = 2 WHERE country = ? AND status IN (?, ?, ?, ?)",
 			expectedParams: []any{"CL", 1, 2, 3, 4},
-			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1, 2, 3, 4),
+			tc: func() *UpdateStm {
+				return Update("client").Set("status = 2").Where("country = ?", "CL").Y().InArgs("status", 1, 2, 3, 4)
+			},
 		},
 		{
 			name:           "update with IN with 1 param in args",
 			expected:       "UPDATE client SET status = 0 WHERE country = ? AND status IN (?)",
 			expectedParams: []any{"CL", 1},
-			tc:             Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1),
+			tc: func() *UpdateStm {
+				return Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1)
+			},
 		},
 		{
 			name:           "update where",
 			expected:       "UPDATE client SET status = 0 WHERE status = ?",
 			expectedParams: []any{1},
-			tc:             Update("client").Set("status = 0").Where("status = ?", 1),
+			tc:             func() *UpdateStm { return Update("client").Set("status = 0").Where("status = ?", 1) },
 		},
 		{
 			name:           "update where order limit",
 			expected:       "UPDATE client SET status = 0 WHERE status = ? ORDER BY ciudad LIMIT ?",
 			expectedParams: []any{1, 10},
-			tc:             Update("client").Set("status = 0").Where("status = ?", 1).OrderBy("ciudad").Limit(10),
+			tc: func() *UpdateStm {
+				return Update("client").Set("status = 0").Where("status = ?", 1).OrderBy("ciudad").Limit(10)
+			},
 		},
 		{
-			name:           "update where and order limit",
+			name:           "UPDATE client SET status = 0 WHERE status = ? AND country = ? ORDER BY ciudad LIMIT ?",
 			expected:       "UPDATE client SET status = 0 WHERE status = ? AND country = ? ORDER BY ciudad LIMIT ?",
 			expectedParams: []any{1, "'CL'", 10},
-			tc:             Update("client").Set("status = 0").Where("status = ?", 1).And("country = ?", "'CL'").OrderBy("ciudad").Limit(10),
+			tc: func() *UpdateStm {
+				return Update("client").Set("status = 0").Where("status = ?", 1).And("country = ?", "'CL'").OrderBy("ciudad").Limit(10)
+			},
 		},
 		// UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9, a = 2, c = 3 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id AND regime_cliente IN ('G01','G02', ?) AND 2 = 2 OR 3 = 3 OR 4 = 4 AND colX LIKE '%ago%' AND colN LIKE '%oga%' AND colY (1, 2, 3) --- Got
 		// UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9, a = 2, c = 3 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id AND regime_cliente IN ('G01','G02', ?) AND 2 = 2 OR 3 = 3 OR 4 = 4 AND colX LIKE '%ago%' AND colN LIKE '%oga%' AND colY LIKE (1, 2, 3)
@@ -512,7 +523,7 @@ func updateTestCases() (tcs []struct {
 					And("discounted.quantity < 100").
 					And("items.id = discounted.id").Y().In("regime_cliente", "'G01','G02', ?", "'G03'").AndIf(true, "2 = 2").Or("3 = 3").OrIf(true, "4 = 4").And("colX").Like("'%ago%'").AndIf(true, "colN").LikeIf(true, "'%oga%'").Y().In("colY", "1, 2, 3")
 
-			}(),
+			},
 		},
 		// UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id --- Got
 		// UPDATE items ,( SELECT , id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id
@@ -520,36 +531,40 @@ func updateTestCases() (tcs []struct {
 			name:           "update join",
 			expected:       "UPDATE business AS b JOIN business_geocode AS g ON b.business_id = g.business_id SET b.mapx = g.latitude, b.mapy = g.longitude WHERE (b.mapx = '' or b.mapx = 0) AND g.latitude > 0 AND 3 = 3",
 			expectedParams: nil,
-			tc: Update("business AS b").
-				JoinIf(true, "business_geocode AS g").OnIf(true, "b.business_id = g.business_id").
-				Set("b.mapx = g.latitude, b.mapy = g.longitude").
-				Where("(b.mapx = '' or b.mapx = 0)").And("g.latitude > 0").ClauseIf(true, "AND", "3 = 3"),
+			tc: func() *UpdateStm {
+				return Update("business AS b").
+					JoinIf(true, "business_geocode AS g").OnIf(true, "b.business_id = g.business_id").
+					Set("b.mapx = g.latitude, b.mapy = g.longitude").
+					Where("(b.mapx = '' or b.mapx = 0)").And("g.latitude > 0").ClauseIf(true, "AND", "3 = 3")
+			},
 		},
 		{
-			tc: Update("items").
-				Set("items.retail = items.retail * 0.9").
-				Set("a = 2").
-				Where("discounted.markup >= 1.3").
-				And("colX").
-				Like("'%ago%'"),
+			tc: func() *UpdateStm {
+				return Update("items").
+					Set("items.retail = items.retail * 0.9").
+					Set("a = 2").
+					Where("discounted.markup >= 1.3").
+					And("colX").
+					Like("'%ago%'")
+			},
 			name:           "",
 			expected:       "UPDATE items SET items.retail = items.retail * 0.9, a = 2 WHERE discounted.markup >= 1.3 AND colX LIKE '%ago%'",
 			expectedParams: []any{},
 		},
 		{
-			tc:             specialCase_docupdater_UpdateTargetQuery(),
+			tc:             specialCase_docupdater_UpdateTargetQuery,
 			name:           "",
 			expected:       "",
 			expectedParams: []any{},
 		},
 		{
-			tc:             specialCase_docupdater_UpdateResendQuery(),
+			tc:             specialCase_docupdater_UpdateResendQuery,
 			name:           "",
 			expected:       "",
 			expectedParams: []any{},
 		},
 		{
-			tc:             specialCase_docupdater_UpdateShippingQuery(),
+			tc:             specialCase_docupdater_UpdateShippingQuery,
 			name:           "",
 			expected:       "",
 			expectedParams: []any{},

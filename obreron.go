@@ -10,7 +10,7 @@ import (
 
 var pool = &sync.Pool{
 	New: func() interface{} {
-		return &stament{grouped: false, firstCol: true, whereAdded: false, lastPos: 0, buff: bytes.Buffer{}}
+		return &stament{grouped: false, firstCol: true, whereAdded: false, lastPos: 0, buff: &bytes.Buffer{}}
 	},
 }
 
@@ -19,8 +19,18 @@ func CloseStament(st *stament) {
 		return
 	}
 
+	resetStament(st)
+	st.buff.Reset()
+	pool.Put(st)
+}
+
+func resetStament(st *stament) {
 	for i := range st.p {
 		st.p[i] = nil
+	}
+
+	for i := range st.s {
+		st.s[i] = segment{}
 	}
 
 	st.p = make([]any, 0)
@@ -29,9 +39,6 @@ func CloseStament(st *stament) {
 	st.grouped = false
 	st.firstCol = true
 	st.whereAdded = false
-	st.buff.Reset()
-
-	pool.Put(st)
 }
 
 type segment struct {
@@ -41,7 +48,7 @@ type segment struct {
 type stament struct {
 	s          []segment
 	p          []any
-	buff       bytes.Buffer
+	buff       *bytes.Buffer
 	lastPos    int
 	whereAdded bool
 	grouped    bool
