@@ -86,13 +86,12 @@ func BenchmarkDelete(b *testing.B) {
 }
 
 func TestUpdate(t *testing.T) {
-	par := parser.New() 
+	par := parser.New()
 	for k := 0; k <= 10000; k++ {
 		for i, tc := range updateTestCases() {
 
 			sql, p := tc.tc.Build()
 
-			
 			// Parser para verificar que el sql es correctamente construido
 			_, _, err := par.ParseSQL(sql)
 
@@ -503,15 +502,15 @@ func updateTestCases() (tcs []struct {
 			expected:       "UPDATE items ,( SELECT id, retail / wholesale AS markup, quantity FROM items ) discounted SET items.retail = items.retail * 0.9, a = 2, c = 3 WHERE discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id AND regime_cliente IN ('G01','G02', ?) AND 2 = 2 OR 3 = 3 OR 4 = 4 AND colX LIKE '%ago%' AND colN LIKE '%oga%' AND colY IN (1, 2, 3)",
 			expectedParams: []any{"'G03'"},
 			tc: func() *UpdateStm {
-			    s := Select().Col("id, retail / wholesale AS markup, quantity").From("items");
+				s := Select().Col("id, retail / wholesale AS markup, quantity").From("items")
 				defer CloseSelect(s)
 
-			    return Update("items").
-				ColSelectIf(true, s, "discounted").
-				Set("items.retail = items.retail * 0.9").Set("a = 2").SetIf(true, "c = 3").
-				Where("discounted.markup >= 1.3").
-				And("discounted.quantity < 100").
-				And("items.id = discounted.id").Y().In("regime_cliente", "'G01','G02', ?", "'G03'").AndIf(true, "2 = 2").Or("3 = 3").OrIf(true, "4 = 4").And("colX").Like("'%ago%'").AndIf(true, "colN").LikeIf(true, "'%oga%'").Y().In("colY", "1, 2, 3")
+				return Update("items").
+					ColSelectIf(true, s, "discounted").
+					Set("items.retail = items.retail * 0.9").Set("a = 2").SetIf(true, "c = 3").
+					Where("discounted.markup >= 1.3").
+					And("discounted.quantity < 100").
+					And("items.id = discounted.id").Y().In("regime_cliente", "'G01','G02', ?", "'G03'").AndIf(true, "2 = 2").Or("3 = 3").OrIf(true, "4 = 4").And("colX").Like("'%ago%'").AndIf(true, "colN").LikeIf(true, "'%oga%'").Y().In("colY", "1, 2, 3")
 
 			}(),
 		},
@@ -538,21 +537,21 @@ func updateTestCases() (tcs []struct {
 			expectedParams: []any{},
 		},
 		{
-			tc: specialCase_docupdater_UpdateTargetQuery(),
-			name: "",
-			expected: "",
+			tc:             specialCase_docupdater_UpdateTargetQuery(),
+			name:           "",
+			expected:       "",
 			expectedParams: []any{},
 		},
 		{
-			tc: specialCase_docupdater_UpdateResendQuery(),
-			name: "",
-			expected: "",
+			tc:             specialCase_docupdater_UpdateResendQuery(),
+			name:           "",
+			expected:       "",
 			expectedParams: []any{},
 		},
 		{
-			tc: specialCase_docupdater_UpdateShippingQuery(),
-			name: "",
-			expected: "",
+			tc:             specialCase_docupdater_UpdateShippingQuery(),
+			name:           "",
+			expected:       "",
 			expectedParams: []any{},
 		},
 	}...)
@@ -607,30 +606,27 @@ func insertTestCases() (tcs []struct {
 // INSERT INTO courses ( name, location, gid ) SELECT name, location, 1 FROM courses WHERE cid = 2 --- Got
 // INSERT INTO courses ( name, location, gid ) SELECT name, location, 1 FROM courses WHERE cid = 2
 
-
-
 type DocupdaterBody struct {
-  ResourceID int
-  StartID int
-  EndID int
-  UseExpirationDate int
-  ClientID int
-  OfficeID int
-  SPS int
-  RemitterID int
-  UserID int
-  LoggedUserID int
-  DocumentTypeID int
-  DocumentNumber int
-  StartDateUTC time.Time
-  EndDateUTC time.Time
-  EndEpoch int
+	ResourceID        int
+	StartID           int
+	EndID             int
+	UseExpirationDate int
+	ClientID          int
+	OfficeID          int
+	SPS               int
+	RemitterID        int
+	UserID            int
+	LoggedUserID      int
+	DocumentTypeID    int
+	DocumentNumber    int
+	StartDateUTC      time.Time
+	EndDateUTC        time.Time
+	EndEpoch          int
 }
 
 func (b *DocupdaterBody) ThereIsEndDate() bool {
 	return b.EndEpoch > 0
 }
-
 
 func specialCase_docupdater_UpdateTargetQuery() *UpdateStm {
 	body := DocupdaterBody{}
@@ -639,20 +635,7 @@ func specialCase_docupdater_UpdateTargetQuery() *UpdateStm {
 	// esto según si esta definido un documento para actualizar, o un rango.
 	noCheckIds := !(body.ResourceID > 0 || (body.StartID > 0 && body.EndID > 0))
 	ob := Select().
-		Col(`TRIM( TRAILING ',' FROM CONCAT(	
-	CASE WHEN _c.email_cliente IS NULL OR LENGTH(TRIM(COALESCE(_c.email_cliente,''))) = 0 
-	    THEN ''
-		ELSE CONCAT(COALESCE(_c.nombre_cliente,''), ' ', COALESCE(_c.apellido_cliente,''), ':', COALESCE(_c.email_cliente,'')) 
-	END, ',', 
-	IFNULL((
-	    SELECT CONCAT(GROUP_CONCAT(
-		    CASE WHEN _cc.email_contacto IS NULL OR LENGTH(TRIM(COALESCE(_cc.email_contacto,''))) = 0 
-			    THEN ''
-				ELSE CONCAT(COALESCE(_cc.nombre_contacto,''), ' ', COALESCE(_cc.apellido_contacto,''), ':', CONCAT(_cc.email_contacto,'')) 
-			END
-		), ',')
-		FROM contacto_cliente _cc
-		WHERE _cc.id_cliente = _c.id_cliente),''))) AS destinatarios`).
+		Col(colStr).
 		Col(`vds.id_venta_documento_tributario`).
 		From("venta_documento_tributario vds").
 		Clause(" STRAIGHT_JOIN ", "cliente _c ON vds.id_cliente = _c.id_cliente ").
@@ -677,7 +660,9 @@ func specialCase_docupdater_UpdateTargetQuery() *UpdateStm {
 		ColSelect(ob, "det").
 		Set("v.destinatarios = det.destinatarios")
 
-	if body.ResourceID > 0 {
+	defer CloseUpdate(up)
+
+	if body.ResourceID == 0 {
 		up.Where("v.id_venta_documento_tributario = det.id_venta_documento_tributario")
 	} else {
 		up.Where("v.id_venta_documento_tributario = ? ", body.ResourceID)
@@ -685,8 +670,6 @@ func specialCase_docupdater_UpdateTargetQuery() *UpdateStm {
 
 	return up
 }
-
-
 
 func specialCase_docupdater_UpdateResendQuery() *UpdateStm {
 	body := DocupdaterBody{}
@@ -733,9 +716,8 @@ CONVERT(
 	return upd
 }
 
-
 func specialCase_docupdater_UpdateShippingQuery() *UpdateStm {
-    body := DocupdaterBody{}
+	body := DocupdaterBody{}
 	ob := Select().
 		Col("1 AS es_despacho").
 		Col("td.nombre_i18n_tipo").
@@ -769,3 +751,20 @@ func specialCase_docupdater_UpdateShippingQuery() *UpdateStm {
 		Where("v.id_venta_documento_tributario = det.id_venta_documento_tributario")
 	return upd
 }
+
+const (
+	colStr = `TRIM( TRAILING ',' FROM CONCAT(	
+	CASE WHEN _c.email_cliente IS NULL OR LENGTH(TRIM(COALESCE(_c.email_cliente,''))) = 0 
+	    THEN ''
+		ELSE CONCAT(COALESCE(_c.nombre_cliente,''), ' ', COALESCE(_c.apellido_cliente,''), ':', COALESCE(_c.email_cliente,'')) 
+	END, ',', 
+	IFNULL((
+	    SELECT CONCAT(GROUP_CONCAT(
+		    CASE WHEN _cc.email_contacto IS NULL OR LENGTH(TRIM(COALESCE(_cc.email_contacto,''))) = 0 
+			    THEN ''
+				ELSE CONCAT(COALESCE(_cc.nombre_contacto,''), ' ', COALESCE(_cc.apellido_contacto,''), ':', CONCAT(_cc.email_contacto,'')) 
+			END
+		), ',')
+		FROM contacto_cliente _cc
+		WHERE _cc.id_cliente = _c.id_cliente),''))) AS destinatarios`
+)

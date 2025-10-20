@@ -10,7 +10,7 @@ import (
 
 var pool = &sync.Pool{
 	New: func() interface{} {
-		return &stament{grouped: false, firstCol: true, whereAdded: false, lastPos:0, buff: bytes.Buffer{}}
+		return &stament{grouped: false, firstCol: true, whereAdded: false, lastPos: 0, buff: bytes.Buffer{}}
 	},
 }
 
