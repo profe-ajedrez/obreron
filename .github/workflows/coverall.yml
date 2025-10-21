@@ -1,0 +1,39 @@
+on: push
+
+name: Coveralls
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js 16.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+
+    - name: npm install, make test-coverage
+      run: |
+        npm install
+        make test-coverage
+
+    - name: Report Coveralls (Linux)
+      if: startsWith(runner.os, 'Linux')
+      run: curl -sL https://coveralls.io/coveralls-linux.tar.gz | tar -xz && ./coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALL_TKN }}
+
+    - name: Report Coveralls (Windows)
+      if: startsWith(runner.os, 'Windows')
+      run: curl -sL https://github.com/coverallsapp/coverage-reporter/releases/latest/download/coveralls-windows.zip | zcat > ./coveralls.exe && ./coveralls.exe
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALL_TKN }}
+
+    - name: Report Coveralls (macOS)
+      if: startsWith(runner.os, 'macOS')
+      run: |
+        brew tap coverallsapp/coveralls --quiet
+        brew install coveralls --quiet
+        coveralls
