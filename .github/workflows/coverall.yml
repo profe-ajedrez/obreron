@@ -1,39 +1,30 @@
-on: push
-
-name: Coveralls
-
+name: Quality
+on: [push, pull_request]
 jobs:
   test:
+    name: Test with Coverage
     runs-on: ubuntu-latest
     steps:
-
-    - uses: actions/checkout@v3
-
-    - name: Use Node.js 16.x
-      uses: actions/setup-node@v3
+    - name: Set up Go
+      uses: actions/setup-go@v2
       with:
-        node-version: 16.x
-
-    - name: npm install, make test-coverage
+        go-version: '1.23'
+    - name: Check out code
+      uses: actions/checkout@v2
+    - name: Install dependencies
       run: |
-        npm install
-        make test-coverage
-
-    - name: Report Coveralls (Linux)
-      if: startsWith(runner.os, 'Linux')
-      run: curl -sL https://coveralls.io/coveralls-linux.tar.gz | tar -xz && ./coveralls
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALL_TKN }}
-
-    - name: Report Coveralls (Windows)
-      if: startsWith(runner.os, 'Windows')
-      run: curl -sL https://github.com/coverallsapp/coverage-reporter/releases/latest/download/coveralls-windows.zip | zcat > ./coveralls.exe && ./coveralls.exe
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALL_TKN }}
-
-    - name: Report Coveralls (macOS)
-      if: startsWith(runner.os, 'macOS')
+        go mod download
+    - name: Run Unit tests
       run: |
-        brew tap coverallsapp/coveralls --quiet
-        brew install coveralls --quiet
-        coveralls
+        go test -race -covermode atomic -coverprofile=covprofile ./...
+    - name: Install goveralls
+      run: go install github.com/mattn/goveralls@latest
+    - name: Send coverage
+      env:
+        COVERALLS_TOKEN: ${{ secrets.COVERALL_TKN }}
+      run: goveralls -coverprofile=covprofile -service=github
+    # or use shogo82148/actions-goveralls
+    # - name: Send coverage
+    #   uses: shogo82148/actions-goveralls@v1
+    #   with:
+    #     path-to-profile: covprofile
