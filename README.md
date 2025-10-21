@@ -8,6 +8,7 @@ Fast and cheap sql builder.
 [![Go Reference](https://pkg.go.dev/badge/github.com/profe-ajedrez/obreron/v2.svg)](https://pkg.go.dev/github.com/profe-ajedrez/obreron/v2)
 [![Go Report Card](https://goreportcard.com/badge/github.com/profe-ajedrez/obreron/v2)](https://goreportcard.com/report/github.com/profe-ajedrez/obreron/v2)
 [![Coverage Status](https://coveralls.io/repos/github/profe-ajedrez/obreron/badge.svg?branch=v2)](https://coveralls.io/github/profe-ajedrez/obreron?branch=v2)
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/avelino/awesome-go)
 
 ## Supported Dialects
 
