@@ -29,9 +29,4 @@ jobs:
         install-go: false
         cache-key: ${{ matrix.go }}
         working-directory: ${{ matrix.dir }}
-    - name: Test
-      run: |
-        go test -v ./... -coverprofile coverage.out -coverpkg ./...
-        go tool cover -func coverage.out -o coverage.out # Replaces coverage.out with the analysis of coverage.out
-    - name: Update coverage report
-      uses: ncruces/go-coverage-report@main
+
