@@ -29,7 +29,6 @@ $ go get github.com/profe-ajedrez/obreron/v2
 
 ## Use
 
-You could see the [examples](examples/) directory.
 
 Import package
 
