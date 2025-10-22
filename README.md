@@ -54,7 +54,11 @@ r, error := db.Query(query)
 ```go
 // Produces SELECT a1, a2, ? AS diez, colIf1, colIf2, ? AS zero, a3, ? AS cien FROM client c JOIN addresses a ON a.id_cliente = a.id_cliente JOIN phones p ON p.id_cliente = c.id_cliente JOIN mailes m ON m.id_cliente = m.id_cliente AND c.estado_cliente = ? LEFT JOIN left_joined lj ON lj.a1 = c.a1 WHERE a1 = ? AND a2 = ? AND a3 = 10 AND a16 = ?
 // with params = []any{10, 0, 100, 0, "'last name'", 1000.54, 75}
-query, params := v2.Select().
+
+sel := v2.Select()
+defer v2.CloseSelect(sel) // Notice we defer the closing of sel. This ios because internally an object pool is used. CloseSelect resets its related data and returns it to the pool
+
+query, params := sel.
     Where("a1 = ?", "'last name'").
     Col("a1, a2, ? AS diez", 10).
     Col(`colIf1, colIf2, ? AS zero`, 0).
