@@ -19,3 +19,5 @@ cover
 # vendor/
 
 
+.txt
+bundle.sh

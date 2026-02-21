@@ -1,42 +1,70 @@
-// Package obreron provides a simple, fast and cheap query builder
 package obreron
 
-// SelectStm is a select stament
+// SelectStm is a SELECT query builder.
+//
+// A SelectStm starts with "SELECT" and accumulates clauses such as columns, FROM, JOIN,
+// WHERE, GROUP BY, HAVING, ORDER BY, LIMIT and OFFSET.
 type SelectStm struct {
 	*stament
 }
 
+// CloseSelect releases the resources used by s and returns them to the internal pool.
+//
+// s must not be used after calling CloseSelect.
+//
+// This is equivalent to calling s.Close().
 func CloseSelect(s *SelectStm) {
 	CloseStament(s.stament)
 }
 
-// Select Returns a select stament
+// Select constructs a new SelectStm initialized with the SELECT keyword.
 //
-// # Example
+// Example:
 //
-// query, _ := Select().Col("a1, a2, a3").From("client").Build()
-// r, error := db.Query(q)
+//	st := Select().Col("a1, a2, a3").From("client")
+//	defer st.Close()
+//
+//	query, args := st.Build()
+//	rows, err := db.Query(query, args...)
 func Select() *SelectStm {
+	st, ok := pool.Get().(*stament)
+
+	if !ok {
+		st = &stament{}
+	}
+
 	s := &SelectStm{
-		pool.Get().(*stament),
+		st,
 	}
 
 	s.add(selectS, "SELECT", "")
+
 	return s
 }
 
-// Close release the resources used by the stament
+// Close releases the resources used by the statement and returns them to the internal pool.
+//
+// Do not use st after calling Close.
 func (st *SelectStm) Close() {
 	CloseStament(st.stament)
 }
 
-// Col adds a column to the select stament.
+// Col adds a column expression to the SELECT clause.
 //
-// # Example
+// - On the first call, expr is appended directly after SELECT.
+// - On subsequent calls, expr is appended preceded by a comma.
 //
-// s := Select()
-// s.Col("name, mail").Col("? AS max_credit", 1000000).
-// From("client")
+// expr is a raw SQL fragment (e.g. "name", "COUNT(1) AS n", "? AS max_credit").
+// Any parameters passed via p are appended to the args list in order.
+//
+// Example:
+//
+//	st := Select().
+//		Col("name, mail").
+//		Col("? AS max_credit", 1000000).
+//		From("client")
+//	defer st.Close()
+//	q, args := st.Build()
 func (st *SelectStm) Col(expr string, p ...any) *SelectStm {
 	if !st.firstCol {
 		st.add(colsS, ",", expr, p...)
@@ -45,18 +73,20 @@ func (st *SelectStm) Col(expr string, p ...any) *SelectStm {
 
 	st.add(colsS, "", expr, p...)
 	st.firstCol = false
+
 	return st
 }
 
-// ColIf adds a column to the select stament only when `cond` parameter is true.
+// ColIf adds a column expression to the SELECT clause only when cond is true.
 //
-// # Example
+// Example:
 //
-// addMaxCredit := true
-//
-// s := Select()
-// s.Col("name, mail").ColIf(addMaxCredit, "? AS max_credit", 1000000).
-// From("client")
+//	addMaxCredit := true
+//	st := Select().
+//		Col("name, mail").
+//		ColIf(addMaxCredit, "? AS max_credit", 1000000).
+//		From("client")
+//	defer st.Close()
 func (st *SelectStm) ColIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		if !st.firstCol {
@@ -67,249 +97,248 @@ func (st *SelectStm) ColIf(cond bool, expr string, p ...any) *SelectStm {
 		st.firstCol = false
 		st.add(colsS, "", expr, p...)
 	}
+
 	return st
 }
 
-// From sets the source table for the select stament
+// From sets the source table for the SELECT statement.
 //
-// # Example
+// source is a raw SQL fragment. Typical values are "client" or "client c".
 //
-// s := Select()
-// s.Col("*").
-// From("client")
+// Example:
+//
+//	st := Select().Col("*").From("client")
+//	defer st.Close()
 func (st *SelectStm) From(source string) *SelectStm {
 	st.add(fromS, "FROM", source)
 	return st
 }
 
-// Join adds a relation to the query in the form of an inner join
+// Join adds an INNER JOIN clause to the query.
 //
-// # Example
+// expr is a raw SQL fragment. You can include the ON predicate in the same fragment:
 //
-// s := Select().Col("*").From("client").
-// Join("addresses a ON a.client_id = c.client_id")
+//	st := Select().Col("*").From("client c").
+//		Join("addresses a ON a.client_id = c.client_id")
 //
-// # Also On clause can be used along with connectors and parameters
+// Or you can build the ON predicate with On/And/Or (useful when binding args):
 //
-// s := Select().Col("*").From("client").
-// Join("addresses a").On("a.client_id = c.client_id").And("c.status = ?", 0)
+//	st := Select().Col("*").From("client c").
+//		Join("addresses a").
+//		On("a.client_id = c.client_id").
+//		And("c.status = ?", 0)
 func (st *SelectStm) Join(expr string, p ...any) *SelectStm {
 	st.add(joinS, "JOIN", expr, p...)
 	return st
 }
 
-// JoinIf adds a relation to the query in the form of an inner join only when the cond parameter is true
-//
-// # Example
-//
-// addJoin := true
-// s := Select().Col("*").
-// From("client").
-// JoinIf(addJoin, "addresses a ON a.client_id = c.client_id")
-//
-// # Also OnIf clause can be used along with connectors and parameters
-//
-// s := Select().Col("*").
-// From("client").
-// JoinIf(aaddJoin, "addresses a").
-// OnIf(addJoin, "a.client_id = c.client_id").And("c.status = ?", 0)
+// JoinIf adds an INNER JOIN clause to the query only when cond is true.
 func (st *SelectStm) JoinIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.add(joinS, "JOIN", expr, p...)
 	}
+
 	return st
 }
 
-// LeftJoin adds a relation to the query in the form of a left join
-//
-// # Example
-//
-// s := Select().Col("*").From("client").
-// LeftJoin("addresses a ON a.client_id = c.client_id")
-//
-// # Also On clause can be used along with connectors and parameters
-//
-// s := Select().Col("*").From("client").
-// LeftJoin("addresses a").On("a.client_id = c.client_id").And("c.status = ?", 0)
+// LeftJoin adds a LEFT JOIN clause to the query.
 func (st *SelectStm) LeftJoin(expr string, p ...any) *SelectStm {
 	st.add(joinS, "LEFT JOIN", expr, p...)
 	return st
 }
 
-// LeftJoinIf adds a relation to the query in the form of a left join only when the cond parameter is true
-//
-// # Example
-//
-// addJoin := true
-// s := Select().Col("*").
-// From("client").
-// LeftJoinIf(addJoin, "addresses a ON a.client_id = c.client_id")
-//
-// # Also OnIf clause can be used along with connectors and parameters
-//
-// s := Select().Col("*").
-// From("client").
-// LeftJoinIf(aaddJoin, "addresses a").
-// OnIf(addJoin, "a.client_id = c.client_id").And("c.status = ?", 0)
+// LeftJoinIf adds a LEFT JOIN clause to the query only when cond is true.
 func (st *SelectStm) LeftJoinIf(cond bool, join string, p ...any) *SelectStm {
 	if cond {
 		st.add(joinS, "LEFT JOIN", join, p...)
 	}
+
 	return st
 }
 
+// RightJoin adds a RIGHT JOIN clause to the query.
 func (st *SelectStm) RightJoin(expr string, p ...any) *SelectStm {
 	st.add(joinS, "RIGHT JOIN", expr, p...)
 	return st
 }
 
+// RightJoinIf adds a RIGHT JOIN clause to the query only when cond is true.
 func (st *SelectStm) RightJoinIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.add(joinS, "RIGHT JOIN", expr, p...)
 	}
+
 	return st
 }
 
+// OuterJoin adds an OUTER JOIN clause to the query.
+//
+// Note: MySQL commonly uses LEFT/RIGHT JOIN; FULL OUTER JOIN is not supported in MySQL.
+// This method simply emits "OUTER JOIN" as written.
 func (st *SelectStm) OuterJoin(expr string, p ...any) *SelectStm {
 	st.add(joinS, "OUTER JOIN", expr, p...)
 	return st
 }
 
+// OuterJoinIf adds an OUTER JOIN clause to the query only when cond is true.
 func (st *SelectStm) OuterJoinIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.add(joinS, "OUTER JOIN", expr, p...)
 	}
+
 	return st
 }
 
+// On adds an ON predicate. It is typically used immediately after a JOIN clause.
+//
+// Example:
+//
+//	st := Select().Col("*").From("client c").
+//		Join("addresses a").
+//		On("a.client_id = c.client_id")
 func (st *SelectStm) On(on string, p ...any) *SelectStm {
 	st.clause("ON", on, p...)
 	return st
 }
 
+// OnIf adds an ON predicate only when cond is true.
 func (st *SelectStm) OnIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.clause("ON", expr, p...)
 	}
+
 	return st
 }
 
-// Where adds a condition to filter the query
+// Where adds a WHERE predicate, or appends to an existing WHERE chain.
 //
-// # Example
+// Example:
 //
-// s := Select().Col("*").From("client").
-// Where("status = ?", 1)
+//	st := Select().Col("*").From("client").
+//		Where("status = ?", 1)
 func (st *SelectStm) Where(cond string, p ...any) *SelectStm {
 	st.where(cond, p...)
-
 	return st
 }
 
-// And adds a condition to the query connecting with an AND operator
+// And appends a predicate joined with AND.
 //
-// # Example
-//
-// s := Select().Col("*").From("client").
-// Where("status = ?", 1).And("country = ?", "CL")
-//
-// Also can be used in join and having clauses
+// It can be used after WHERE, ON, and HAVING, depending on the last clause invoked.
 func (st *SelectStm) And(expr string, p ...any) *SelectStm {
 	st.clause("AND", expr, p...)
 	return st
 }
 
-// AndIf adds a condition to the query connecting with an AND operator only when cond parameter is true
-//
-// # Example
-//
-// filterByCountry = true
-// s := Select().Col("*").From("client").
-// Where("status = ?", 1).AndIf("country = ?", "CL")
-//
-// Also can be used in join and having clauses
+// AndIf appends a predicate joined with AND only when cond is true.
 func (st *SelectStm) AndIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.clause("AND", expr, p...)
 	}
+
 	return st
 }
 
-// Y adds an AND conector to the stament where is called. Its helpful when used with In()
+// Y appends an "AND" connector without an expression.
 //
-// # Example
+// This is a convenience helper when you want to add a connector and then build a
+// structured clause (like InArgs) right after it.
 //
-//	Select().
+// Example:
+//
+//	st := Select().
 //		Col("*").
 //		From("client").
 //		Where("country = ?", "CL").
 //		Y().
-//		In("status", "", 1, 2, 3, 4)
+//		InArgs("status", 1, 2, 3, 4)
 //
-// Produces: SELECT * FROM client WHERE country = ? AND status IN (?, ?, ?, ?)
-func (up *SelectStm) Y() *SelectStm {
-	up.clause("AND", "")
-	return up
+// Produces:
+//
+//	SELECT * FROM client WHERE country = ? AND status IN (?, ?, ?, ?)
+func (st *SelectStm) Y() *SelectStm {
+	st.clause("AND", "")
+	return st
 }
 
+// Or appends a predicate joined with OR.
 func (st *SelectStm) Or(expr string, p ...any) *SelectStm {
 	st.clause("OR", expr, p...)
 	return st
 }
 
+// OrIf appends a predicate joined with OR only when cond is true.
 func (st *SelectStm) OrIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.clause("OR", expr, p...)
 	}
+
 	return st
 }
 
-// Like adds a LIKE clause to the query after the las clause added
+// Like appends a LIKE clause to the last emitted predicate.
 //
-// # Example
+// Example:
 //
-// Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("city").Like("'%ago%'")
+//	st := Select().
+//		Col("a1, a2, a3").
+//		From("client").
+//		Where("1 = 1").
+//		And("city").
+//		Like("'%ago%'")
 //
-// Observe that if you use it like Select().Like(..., will produce "SELECT LIKE"
+// Note: If you call Like() immediately after Select() without a prior predicate,
+// you'll produce invalid SQL such as "SELECT LIKE ...".
 func (st *SelectStm) Like(expr string, p ...any) *SelectStm {
 	st.clause("LIKE", expr, p...)
 	return st
 }
 
-// LikeIf adds a LIKE clause to the query after the las clause added, when cond is true
-//
-// # Example
-//
-// Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("city").LikeIf(true, "'%ago%'")
+// LikeIf appends a LIKE clause only when cond is true.
 func (st *SelectStm) LikeIf(cond bool, expr string, p ...any) *SelectStm {
 	if cond {
 		st.clause("LIKE", expr, p...)
 	}
+
 	return st
 }
 
-// In adds a IN clause to the query after the las clause added
+// In appends an IN clause to the last emitted predicate.
 //
-// # Example
+// Example:
 //
-// Select().Col("a1, a2, a3").From("client").Where("1 = 1").And("city").In("'Nagoya'", "'Tokio", "'Parral'")
+//	st := Select().
+//		Col("a1, a2, a3").
+//		From("client").
+//		Where("1 = 1").
+//		And("city").
+//		In("'Nagoya'", "'Tokio'", "'Parral'")
+//
+// Note: In() treats expr as raw SQL; prefer InArgs() if you want parameter binding.
 func (st *SelectStm) In(expr string, p ...any) *SelectStm {
 	st.clause("IN (", expr+")", p...)
 	return st
 }
 
-// InArgs adds an In clause to the stament automatically setting the positional parameters of the query based on the
-// passed parameters
-func (up *SelectStm) InArgs(value string, p ...any) *SelectStm {
-	up.stament.inArgs(value, p...)
-	return up
+// InArgs appends an IN clause and automatically emits positional parameters.
+//
+// Example:
+//
+//	st := Select().
+//		Col("*").
+//		From("client").
+//		Where("country = ?", "CL").
+//		And("status").
+//		InArgs("status", 1, 2, 3)
+//
+// If p is empty, the generated clause will never match any row (e.g. "... IN (NULL)").
+func (st *SelectStm) InArgs(value string, p ...any) *SelectStm {
+	st.inArgs(value, p...)
+	return st
 }
 
-// GroupBy adds a GROUP BY clause to the query
+// GroupBy adds a GROUP BY clause.
 //
-// # Example
-//
-// Select().Col("a1, a2, a3").From("client").Where("1 = 1").GroupBy("a1")
+// Multiple calls append group keys separated by commas.
 func (st *SelectStm) GroupBy(grp string, p ...any) *SelectStm {
 	if !st.grouped {
 		st.add(groupS, "GROUP BY", grp, p...)
@@ -321,59 +350,58 @@ func (st *SelectStm) GroupBy(grp string, p ...any) *SelectStm {
 	return st
 }
 
-// Having adds a HAVING clause to the query
+// Having adds a HAVING clause.
 //
-// # Example
+// Example:
 //
-// Select().Col("a1, a2, a3, COUNT(1) AS how_many").From("client").Where("1 = 1").GroupBy("a1").Having(how_many > 100)
+//	st := Select().
+//		Col("a1, COUNT(1) AS how_many").
+//		From("client").
+//		GroupBy("a1").
+//		Having("how_many > ?", 100)
 func (st *SelectStm) Having(hav string, p ...any) *SelectStm {
 	st.add(havingS, "HAVING", hav, p...)
 	return st
 }
 
-// OrderBy adds an ORDER BY clause to the query
-//
-// # Example
-//
-// Select().Col("a1, a2, a3").From("client").Where("1 = 1").OrderBy("a1 ASC")
+// OrderBy adds an ORDER BY clause.
 func (st *SelectStm) OrderBy(expr string, p ...any) *SelectStm {
 	st.add(orderS, "ORDER BY", expr, p...)
 	return st
 }
 
-// Limit adds a LIMIT clause to the query
-//
-// # Example
-//
-// Select().Col("a1, a2, a3").From("client").Where("1 = 1").Limit(100)
+// Limit adds a LIMIT clause (MySQL-style) using a positional parameter.
 func (st *SelectStm) Limit(limit int) *SelectStm {
 	st.add(limitS, "LIMIT", "?", limit)
 	return st
 }
 
+// Offset adds an OFFSET clause (MySQL-style) using a positional parameter.
 func (st *SelectStm) Offset(off int) *SelectStm {
 	st.add(offsetS, "OFFSET", "?", off)
 	return st
 }
 
-// Clause adds a custom clause to the query in the position were is invoked
+// Clause inserts a custom clause at the current position (the position of the last clause added).
 //
-// # Example
+// This is useful for vendor-specific hints.
 //
-// Select().Clause("SQL NO CACHE").Col("a1, a2, a3").From("client").Where("1 = 1")
+// Example:
+//
+//	st := Select().
+//		Clause("SQL_NO_CACHE", "").
+//		Col("a1, a2, a3").
+//		From("client")
 func (st *SelectStm) Clause(clause, expr string, p ...any) *SelectStm {
 	st.add(st.lastPos, clause, expr, p...)
 	return st
 }
 
-// ClauseIf adds a custom clause to the query in the position were is invoked, whencond is true
-//
-// # Example
-//
-// Select().ClauseIf(true, "SQL NO CACHE").Col("a1, a2, a3").From("client").Where("1 = 1")
+// ClauseIf inserts a custom clause at the current position only when cond is true.
 func (st *SelectStm) ClauseIf(cond bool, clause, expr string, p ...any) *SelectStm {
 	if cond {
 		st.add(st.lastPos, clause, expr, p...)
 	}
+
 	return st
 }

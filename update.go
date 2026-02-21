@@ -6,25 +6,22 @@ type UpdateStm struct {
 }
 
 // Update returns an update stament
-//
-// # Example
-//
-// upd := Update("client").Set("status = 0").Where("status = ?", 1)
-//
-// query, p := upd.Build() // builds UPDATE client SET status = 0 WHERE status = ?  and stores in p []any{1}
-//
-// r, err := db.Exec(query, p...)
 func Update(table string) *UpdateStm {
-	//d := upPool.Get().(*UpdateStm)
-	//d.stament = pool.Get().(*stament)
+	st, ok := pool.Get().(*stament)
+	if !ok {
+		st = &stament{}
+	}
+
 	d := &UpdateStm{
-		stament: pool.Get().(*stament),
+		stament: st,
 	}
 	d.firstCol = true
 	d.add(updateS, "UPDATE", table)
+
 	return d
 }
 
+// CloseUpdate resets and returns to the pool an update stament
 func CloseUpdate(s *UpdateStm) {
 	CloseStament(s.stament)
 }
@@ -48,7 +45,6 @@ func CloseUpdate(s *UpdateStm) {
 //
 //	query, p := upd.Build() // builds UPDATE items, ( SELECT id, retail / wholesale AS markup, quantity FROM items) discounted SET a = 2, c = 3 WHERE 1 = 1 AND discounted.markup >= 1.3 AND discounted.quantity < 100 AND items.id = discounted.id
 func (up *UpdateStm) ColSelect(col *SelectStm, alias string) *UpdateStm {
-
 	up.Clause(",(", "")
 
 	q, p := col.Build()
@@ -87,7 +83,7 @@ func (up *UpdateStm) Set(expr string, p ...any) *UpdateStm {
 	return up
 }
 
-// Set adds set clause to the update stament when the cond param is true
+// SetIf adds set clause to the update stament when the cond param is true
 func (up *UpdateStm) SetIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.Set(expr, p...)
@@ -120,12 +116,13 @@ func (up *UpdateStm) And(expr string, p ...any) *UpdateStm {
 	return up
 }
 
-// And adds an AND conector with eventual parameters to the stament where is called, only when
+// AndIf adds an AND conector with eventual parameters to the stament where is called, only when
 // cond parameter is true
 func (up *UpdateStm) AndIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.clause("AND", expr, p...)
 	}
+
 	return up
 }
 
@@ -140,6 +137,7 @@ func (up *UpdateStm) OrIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.clause("OR", expr, p...)
 	}
+
 	return up
 }
 
@@ -172,6 +170,7 @@ func (up *UpdateStm) LikeIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.clause("LIKE", expr, p...)
 	}
+
 	return up
 }
 
@@ -196,8 +195,9 @@ func (up *UpdateStm) In(value, expr string, p ...any) *UpdateStm {
 //	Update("client").Set("status = 0").Where("country = ?", "CL").Y().InArgs("status", 1, 2, 3, 4)
 //
 // Produces: UPDATE client SET status = 0 WHERE country = ? AND status IN (?, ?, ?, ?)"
+// If p is empty, the generated clause will never match any row.
 func (up *UpdateStm) InArgs(value string, p ...any) *UpdateStm {
-	up.stament.inArgs(value, p...)
+	up.inArgs(value, p...)
 	return up
 }
 
@@ -206,25 +206,30 @@ func (up *UpdateStm) Close() {
 	CloseStament(up.stament)
 }
 
+// OrderBy adds an Order  clause
 func (up *UpdateStm) OrderBy(expr string, p ...any) *UpdateStm {
-	up.add(limitS, "ORDER BY", expr, p...)
+	up.add(orderS, "ORDER BY", expr, p...)
 	return up
 }
 
+// Limit adds a limit clause
 func (up *UpdateStm) Limit(limit int) *UpdateStm {
 	up.add(limitS, "LIMIT", "?", limit)
 	return up
 }
 
+// Clause adds a RAW clause
 func (up *UpdateStm) Clause(clause, expr string, p ...any) *UpdateStm {
 	up.add(up.lastPos, clause, expr, p...)
 	return up
 }
 
+// ClauseIf adds a RAW clause if cond is true
 func (up *UpdateStm) ClauseIf(cond bool, clause, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.Clause(clause, expr, p...)
 	}
+
 	return up
 }
 
@@ -244,22 +249,26 @@ func (up *UpdateStm) Join(expr string, p ...any) *UpdateStm {
 	return up
 }
 
+// JoinIf adds a join clause if cond is true
 func (up *UpdateStm) JoinIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.Join(expr, p...)
-
 	}
+
 	return up
 }
 
+// On adds a On estament
 func (up *UpdateStm) On(on string, p ...any) *UpdateStm {
 	up.clause("ON", on, p...)
 	return up
 }
 
+// OnIf adds a On stament if cond is true
 func (up *UpdateStm) OnIf(cond bool, expr string, p ...any) *UpdateStm {
 	if cond {
 		up.On(expr, p...)
 	}
+
 	return up
 }

@@ -1,3 +1,24 @@
+// Package obreron provides a small SQL query builder for Go.
+//
+// It is designed to be a "cheap" builder that produces:
+//   - an SQL string
+//   - a slice of positional parameters (args) compatible with database/sql
+//
+// obreron is NOT an ORM and does not execute queries. It only builds SQL.
+//
+// Security note:
+//
+//	This package does not escape or quote identifiers (tables/columns) for you.
+//	Never pass untrusted input as table/column names or raw SQL fragments.
+//
+// Concurrency:
+//
+//	Builder instances are not safe for concurrent use. Create one builder per goroutine.
+//
+// Resource lifecycle:
+//
+//	Builders borrow internal buffers from a pool. Call Close() when you're done with a
+//	builder instance to release resources back to the pool. Do not use a builder after Close().
 package obreron
 
 import (
@@ -5,7 +26,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"unsafe"
 )
 
 var pool = &sync.Pool{
@@ -14,6 +34,7 @@ var pool = &sync.Pool{
 	},
 }
 
+// CloseStament resets and closes a Select stament
 func CloseStament(st *stament) {
 	if st == nil {
 		return
@@ -25,16 +46,14 @@ func CloseStament(st *stament) {
 }
 
 func resetStament(st *stament) {
-	for i := range st.p {
-		st.p[i] = nil
-	}
-
-	for i := range st.s {
-		st.s[i] = segment{}
-	}
-
-	st.p = make([]any, 0)
-	st.s = make([]segment, 0)
+	// Importante: []any puede retener referencias a objetos grandes.
+	// clear() suelta esas referencias sin perder la capacity del slice.
+	clear(st.p)
+	st.p = st.p[:0]
+	// segment actualmente solo tiene ints,
+	// pero clear + reslice mantiene el patrón y evita sorpresas si mañana cambia.
+	clear(st.s)
+	st.s = st.s[:0]
 	st.lastPos = 0
 	st.grouped = false
 	st.firstCol = true
@@ -46,9 +65,9 @@ type segment struct {
 }
 
 type stament struct {
+	buff       *bytes.Buffer
 	s          []segment
 	p          []any
-	buff       *bytes.Buffer
 	lastPos    int
 	whereAdded bool
 	grouped    bool
@@ -60,9 +79,10 @@ func (st *stament) clause(clause, expr string, p ...any) {
 }
 
 func (st *stament) inArgs(value string, p ...any) {
-
 	if len(p) == 0 {
-		st.clause(value+" IN ()", "")
+		// Empty IN list is invalid SQL in MySQL.
+		// IN (NULL) produces NULL/unknown => treated as false in WHERE/ON/HAVING filters.
+		st.clause(value+" IN (NULL)", "")
 		return
 	}
 
@@ -72,12 +92,17 @@ func (st *stament) inArgs(value string, p ...any) {
 	}
 
 	l := len(p)
+
 	var builder strings.Builder
-	builder.Grow(l * 2) // Pre-allocate capacity, fool!
+
+	const grow = 2
+	builder.Grow(l * grow) // aprox: "?, ?, ?" => 1 + 3*(l-1)
 	builder.WriteString("?")
+
 	for i := 1; i < l; i++ {
 		builder.WriteString(", ?")
 	}
+
 	st.clause(value+" IN ("+builder.String()+")", "", p...)
 }
 
@@ -88,7 +113,6 @@ func (st *stament) where(cond string, p ...any) {
 	} else {
 		st.add(whereS, "AND", cond, p...)
 	}
-
 }
 
 // Build return the query as a string with the added parameters
@@ -111,13 +135,13 @@ func (st *stament) Build() (string, []any) {
 
 	dest := orderQueryAndParams(st, &b, buf)
 
-	ss := b.Bytes()
-	return *(*string)(unsafe.Pointer(&ss)), dest
+	return b.String(), dest
 }
 
 func orderQueryAndParams(st *stament, b *bytes.Buffer, buf []byte) []any {
 	dest := make([]any, len(st.p))
 	first := 0
+
 	for i := 0; i < len(st.s); i++ {
 		k := i
 		j := 0
@@ -137,12 +161,14 @@ func orderQueryAndParams(st *stament, b *bytes.Buffer, buf []byte) []any {
 			k++
 			j++
 		}
+
 		i = k - 1
 
 		if i < len(st.s)-1 {
 			b.WriteString(" ")
 		}
 	}
+
 	return dest
 }
 
@@ -154,7 +180,9 @@ func (st *stament) add(pos int, clause, expr string, p ...any) {
 	st.lastPos = pos
 
 	if cap(st.s) == len(st.s) {
-		segments := make([]segment, len(st.s), cap(st.s)*2)
+		const capSize = 2
+
+		segments := make([]segment, len(st.s), cap(st.s)*capSize)
 		copy(segments, st.s)
 		st.s = segments
 	}
@@ -165,7 +193,7 @@ func (st *stament) add(pos int, clause, expr string, p ...any) {
 	if expr != "" {
 		if l > 0 {
 			_, _ = st.buff.WriteString(" ")
-			l += 1
+			l++
 		}
 
 		_, _ = st.buff.WriteString(expr)
@@ -183,7 +211,6 @@ func (st *stament) add(pos int, clause, expr string, p ...any) {
 	if pl > 0 {
 		st.s[len(st.s)-1].pIndex = len(st.p)
 		st.p = append(st.p, p...)
-		//st.p = insertAt(st.p, p, len(st.p))
 	}
 }
 

@@ -1,6 +1,6 @@
 module github.com/profe-ajedrez/obreron/v2
 
-go 1.23.1
+go 1.26
 
 require github.com/pingcap/tidb/pkg/parser v0.0.0-20251010104500-c1297c9b332c
 
