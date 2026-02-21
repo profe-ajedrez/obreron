@@ -25,7 +25,8 @@ func TestUpdateBuildAfterCloseReturnsSnapshot(t *testing.T) {
 			Set("v.x = det.x").
 			Where("v.id = det.id")
 
-		defer obreron.CloseUpdate(up) // patrón malo
+		defer obreron.CloseUpdate(up)
+
 		return up
 	}
 

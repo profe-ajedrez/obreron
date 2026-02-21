@@ -2,11 +2,10 @@ package obreron
 
 // UpdateStm represents an update stament
 type UpdateStm struct {
+	snapQ string
 	*stament
-
-	closed bool
-	snapQ  string
 	snapP  []any
+	closed bool
 }
 
 // Update returns an update stament
@@ -25,6 +24,7 @@ func Update(table string) *UpdateStm {
 	return d
 }
 
+// Build returns sql query and its parameters
 func (up *UpdateStm) Build() (string, []any) {
 	// Si ya cerramos, devolvemos snapshot estable.
 	if up.closed {
@@ -36,6 +36,7 @@ func (up *UpdateStm) Build() (string, []any) {
 
 	// Cachea el último build para que Close() no tenga que reconstruir.
 	up.snapQ = q
+
 	up.snapP = append([]any(nil), p...) // copia defensiva
 
 	return q, p
@@ -52,6 +53,7 @@ func CloseUpdate(up *UpdateStm) {
 	if up.snapQ == "" && len(up.snapP) == 0 {
 		q, p := up.stament.Build()
 		up.snapQ = q
+
 		up.snapP = append([]any(nil), p...)
 	}
 
