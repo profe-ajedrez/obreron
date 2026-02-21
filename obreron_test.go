@@ -1,6 +1,9 @@
 package obreron_test
 
 import (
+	"fmt"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -8,6 +11,111 @@ import (
 	_ "github.com/pingcap/tidb/pkg/parser/test_driver"
 	"github.com/profe-ajedrez/obreron/v2"
 )
+
+func TestUpdateBuildAfterCloseReturnsSnapshot(t *testing.T) {
+	makeBad := func() *obreron.UpdateStm {
+		ob := obreron.Select().
+			Col("1").
+			From("t").
+			Where("1=1")
+		defer obreron.CloseSelect(ob)
+
+		up := obreron.Update("vw_docs_search v").
+			ColSelect(ob, "det").
+			Set("v.x = det.x").
+			Where("v.id = det.id")
+
+		defer obreron.CloseUpdate(up) // patrón malo
+		return up
+	}
+
+	up := makeBad()
+
+	// Churn: intenta forzar reuse del pool
+	s := obreron.Select().Col("1").From("x")
+	_, _ = s.Build()
+	s.Close()
+
+	q, _ := up.Build()
+	if q == "" || !strings.HasPrefix(q, "UPDATE ") {
+		t.Fatalf("expected stable UPDATE snapshot, got: %q", q)
+	}
+}
+
+func TestUseAfterCloseSequential(t *testing.T) {
+	// helper que retorna builder ya cerrado (patrón real a buscar)
+	bad := func() *obreron.UpdateStm {
+		up := obreron.Update("t").Set("a=1")
+		defer obreron.CloseUpdate(up)
+
+		return up
+	}
+
+	runtime.GOMAXPROCS(1)
+
+	up := bad()
+
+	// churn del pool: fuerza a que el mismo *stament sea reutilizado
+	for i := 0; i < 5000; i++ {
+		s := obreron.Select().Col("1").From("x")
+		_, _ = s.Build()
+		s.Close()
+	}
+
+	q, _ := up.Build()
+	if q == "" {
+		t.Fatalf("corrupted SQL: empty string (builder likely closed/recycled before Build)")
+	}
+
+	if !strings.HasPrefix(q, "UPDATE ") {
+		t.Fatalf("corrupted SQL: %s", q)
+	}
+}
+
+func TestCorruptionStress(t *testing.T) {
+	t.Parallel()
+
+	const goroutines = 32
+
+	const iters = 2000
+
+	errCh := make(chan error, goroutines)
+
+	for g := 0; g < goroutines; g++ {
+		go func() {
+			for i := 0; i < iters; i++ {
+				// construye el update con subselect, como tu caso real
+				ob := obreron.Select().
+					Col("1").
+					From("t").
+					Where("1=1")
+				up := obreron.Update("vw_docs_search v").
+					ColSelect(ob, "det").
+					Set("v.x = 1").
+					Where("v.id = det.id")
+
+				q, _ := up.Build()
+
+				// quick invariant: un UPDATE debe empezar con UPDATE
+				if !strings.HasPrefix(q, "UPDATE") {
+					errCh <- fmt.Errorf("corrupt SQL: %s", q)
+					return
+				}
+
+				obreron.CloseSelect(ob)
+				obreron.CloseUpdate(up)
+			}
+
+			errCh <- nil
+		}()
+	}
+
+	for i := 0; i < goroutines; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatal(err)
+		}
+	}
+}
 
 // TestInsertH3Regression verifica que obreron.InsertStament.Col genera placeholders
 // correctos (con comas) cuando se pasan múltiples params en posiciones no-primeras.

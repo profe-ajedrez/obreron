@@ -3,6 +3,10 @@ package obreron
 // UpdateStm represents an update stament
 type UpdateStm struct {
 	*stament
+
+	closed bool
+	snapQ  string
+	snapP  []any
 }
 
 // Update returns an update stament
@@ -21,9 +25,43 @@ func Update(table string) *UpdateStm {
 	return d
 }
 
+func (up *UpdateStm) Build() (string, []any) {
+	// Si ya cerramos, devolvemos snapshot estable.
+	if up.closed {
+		return up.snapQ, append([]any(nil), up.snapP...)
+	}
+
+	// Build normal (usa el stament real)
+	q, p := up.stament.Build()
+
+	// Cachea el último build para que Close() no tenga que reconstruir.
+	up.snapQ = q
+	up.snapP = append([]any(nil), p...) // copia defensiva
+
+	return q, p
+}
+
 // CloseUpdate resets and returns to the pool an update stament
-func CloseUpdate(s *UpdateStm) {
-	CloseStament(s.stament)
+func CloseUpdate(up *UpdateStm) {
+	if up.closed {
+		return
+	}
+
+	// Si todavía no hay snapshot, congélalo ahora.
+	// (Esto cubre el caso malo: Close() ocurre antes de Build()).
+	if up.snapQ == "" && len(up.snapP) == 0 {
+		q, p := up.stament.Build()
+		up.snapQ = q
+		up.snapP = append([]any(nil), p...)
+	}
+
+	up.closed = true
+
+	// Devuelve recursos al pool.
+	CloseStament(up.stament)
+
+	// Detacha el stament para evitar “mezclas” si alguien llama métodos luego.
+	up.stament = nil
 }
 
 // ColSelect is a helper method which provides a way to build an update (select ...) stament
@@ -203,7 +241,7 @@ func (up *UpdateStm) InArgs(value string, p ...any) *UpdateStm {
 
 // Close frees up the resources used in the stament
 func (up *UpdateStm) Close() {
-	CloseStament(up.stament)
+	CloseUpdate(up)
 }
 
 // OrderBy adds an Order  clause
