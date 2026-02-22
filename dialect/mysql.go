@@ -25,7 +25,9 @@ func (MySQL) Name() string { return "mysql" }
 
 func (MySQL) SupportsReturning() bool { return false }
 
-func (MySQL) MaxParams() int { return 0 }
+// MaxParams returns a conservative positional-parameter limit for MySQL/MariaDB
+// prepared statements. This is commonly 65535.
+func (MySQL) MaxParams() int { return 65_535 }
 
 // MariaDB is an alias of MySQL behavior for v3.0.
 type MariaDB struct{ MySQL }
