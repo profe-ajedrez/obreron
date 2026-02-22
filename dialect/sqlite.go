@@ -9,7 +9,7 @@ func (SQLite) AppendPlaceholder(dst []byte, _ int) []byte {
 
 func (SQLite) AppendQuotedIdentifier(dst []byte, id string) []byte {
 	dst = append(dst, '"')
-	for i := 0; i < len(id); i++ {
+	for i := range len(id) {
 		b := id[i]
 		if b == '"' {
 			dst = append(dst, '"', '"')

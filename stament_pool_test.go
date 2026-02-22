@@ -1,71 +1,72 @@
-package obreron
+package obreron_test
 
 import (
-    "errors"
-    "testing"
+	"errors"
+	"testing"
 
-    "github.com/profe-ajedrez/obreron/v3/dialect"
+	"github.com/profe-ajedrez/obreron/v3"
+	"github.com/profe-ajedrez/obreron/v3/dialect"
 )
 
 func TestStamentResetClearsAllFieldsIncludingDialect(t *testing.T) {
-    st := acquireStament(dialect.MySQL{})
-    // Mutate state.
-    st.buf = append(st.buf, 'a', 'b')
-    st.segs = append(st.segs, newSegment(0, 2, 1, -1, 0))
-    st.params = append(st.params, 1, 2)
-    st.flags = 0xFF
-    st.lastSType = 7
-    st.setErr("WHERE", ErrPlaceholderMismatch)
+	st := obreron.AcquireStament(dialect.MySQL{})
 
-    releaseStament(st)
+	obreron.AppendBuff(st, 'a', 'b')
+	obreron.AppendSegment(st, obreron.NewSegment(0, 2, 1, -1, 0))
+	obreron.AppendParams(st, 1, 2)
+	obreron.SetFlag(st, 0xFF)
+	obreron.SetLastStype(st, 7)
+	obreron.SetErr(st, "WHERE", obreron.ErrPlaceholderMismatch)
+	obreron.ReleaseStament(st)
 
-    if st.dialect != nil {
-        t.Fatalf("expected dialect=nil after reset, got=%T", st.dialect)
-    }
-    if st.err != nil {
-        t.Fatalf("expected err=nil after reset, got=%v", st.err)
-    }
-    if st.flags != 0 || st.lastSType != 0 {
-        t.Fatalf("expected flags/lastSType reset to 0, got flags=%d last=%d", st.flags, st.lastSType)
-    }
-    if len(st.buf) != 0 || len(st.segs) != 0 || len(st.params) != 0 {
-        t.Fatalf("expected slices cleared, got buf=%d segs=%d params=%d", len(st.buf), len(st.segs), len(st.params))
-    }
+	if obreron.GetDialect(st) != nil {
+		t.Fatalf("expected dialect=nil after reset, got=%T", obreron.GetDialect(st))
+	}
+	if errOb := obreron.GetErr(st); errOb != nil {
+		t.Fatalf("expected err=nil after reset, got=%v", errOb)
+	}
+	if obreron.GetFlag(st) != 0 || obreron.GetLastStype(st) != 0 {
+		t.Fatalf("expected flags/lastSType reset to 0, got flags=%d last=%d", obreron.GetFlag(st), obreron.GetLastStype(st))
+	}
+	if obreron.GetBuffLen(st) != 0 || obreron.GetSegsLength(st) != 0 || obreron.GetParamsLength(st) != 0 {
+		t.Fatalf("expected slices cleared, got buf=%d segs=%d params=%d", obreron.GetBuffLen(st), obreron.GetSegsLength(st), obreron.GetParamsLength(st))
+	}
 }
 
 func TestAcquireAlwaysAssignsDialect(t *testing.T) {
-    st := acquireStament(dialect.MySQL{})
-    releaseStament(st)
+	st := obreron.AcquireStament(dialect.MySQL{})
+	obreron.ReleaseStament(st)
 
-    st2 := acquireStament(dialect.Postgres{})
-    defer releaseStament(st2)
+	st2 := obreron.AcquireStament(dialect.Postgres{})
+	defer obreron.ReleaseStament(st2)
 
-    if st2.dialect == nil {
-        t.Fatalf("expected dialect assigned")
-    }
-    if st2.dialect.Name() != (dialect.Postgres{}).Name() {
-        t.Fatalf("expected Postgres dialect, got=%s", st2.dialect.Name())
-    }
+	if obreron.GetDialect(st2) == nil {
+		t.Fatalf("expected dialect assigned")
+	}
+	if obreron.GetDialect(st2).Name() != (dialect.Postgres{}).Name() {
+		t.Fatalf("expected Postgres dialect, got=%s", obreron.GetDialect(st).Name())
+	}
 }
 
 func TestSetErrFirstErrorWins(t *testing.T) {
-    st := acquireStament(dialect.MySQL{})
-    defer releaseStament(st)
+	st := obreron.AcquireStament(dialect.MySQL{})
+	defer obreron.ReleaseStament(st)
 
-    st.setErr("WHERE", ErrPlaceholderMismatch)
-    st.setErr("FROM", ErrEmptyFrom)
+	obreron.SetErr(st, "WHERE", obreron.ErrPlaceholderMismatch)
+	obreron.SetErr(st, "FROM", obreron.ErrEmptyFrom)
 
-    if st.err == nil {
-        t.Fatalf("expected err set")
-    }
-    if !errors.Is(st.err, ErrPlaceholderMismatch) {
-        t.Fatalf("expected first error to win (ErrPlaceholderMismatch), got=%v", st.err)
-    }
-    var be *BuildError
-    if !errors.As(st.err, &be) {
-        t.Fatalf("expected BuildError wrapper, got=%T", st.err)
-    }
-    if be.Op != "WHERE" {
-        t.Fatalf("expected Op=WHERE, got=%s", be.Op)
-    }
+	if obreron.GetErr(st) == nil {
+		t.Fatalf("expected err set")
+	}
+	if !errors.Is(obreron.GetErr(st), obreron.ErrPlaceholderMismatch) {
+		t.Fatalf("expected first error to win (ErrPlaceholderMismatch), got=%v", obreron.GetErr(st))
+	}
+
+	var be *obreron.BuildError
+	if !errors.As(obreron.GetErr(st), &be) {
+		t.Fatalf("expected BuildError wrapper, got=%T", obreron.GetErr(st))
+	}
+	if be.Op != "WHERE" {
+		t.Fatalf("expected Op=WHERE, got=%s", be.Op)
+	}
 }
