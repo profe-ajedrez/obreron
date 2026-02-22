@@ -1,14 +1,16 @@
-package dialect
+package dialect_test
 
 import (
 	"testing"
+
+	"github.com/profe-ajedrez/obreron/v3/dialect"
 )
 
 func TestDialect_AppendPlaceholder(t *testing.T) {
 	var (
-		my MySQL
-		pg Postgres
-		sq SQLite
+		my dialect.MySQL
+		pg dialect.Postgres
+		sq dialect.SQLite
 	)
 
 	if got := string(my.AppendPlaceholder(nil, 0)); got != "?" {
@@ -32,9 +34,9 @@ func TestDialect_AppendPlaceholder(t *testing.T) {
 
 func TestDialect_AppendQuotedIdentifier(t *testing.T) {
 	var (
-		my MySQL
-		pg Postgres
-		sq SQLite
+		my dialect.MySQL
+		pg dialect.Postgres
+		sq dialect.SQLite
 	)
 
 	// MySQL uses backticks and escapes ` as ``.
@@ -52,7 +54,7 @@ func TestDialect_AppendQuotedIdentifier(t *testing.T) {
 }
 
 func TestDialect_Metadata(t *testing.T) {
-	dialects := []Dialect{MySQL{}, MariaDB{}, Postgres{}, SQLite{}}
+	dialects := []dialect.Dialect{dialect.MySQL{}, dialect.MariaDB{}, dialect.Postgres{}, dialect.SQLite{}}
 	for _, d := range dialects {
 		if d.Name() == "" {
 			t.Fatalf("Name must not be empty for %T", d)
@@ -73,15 +75,15 @@ func TestDialect_Metadata(t *testing.T) {
 
 func TestDialect_MaxParamsSemantics(t *testing.T) {
 	// Contract: 0 means "unknown / do not validate".
-	if got := (SQLite{}).MaxParams(); got != 0 {
+	if got := (dialect.SQLite{}).MaxParams(); got != 0 {
 		t.Fatalf("SQLite MaxParams: got %d want %d", got, 0)
 	}
 
 	// For MySQL/Postgres we expose a conservative known limit.
-	if got := (MySQL{}).MaxParams(); got <= 0 {
+	if got := (dialect.MySQL{}).MaxParams(); got <= 0 {
 		t.Fatalf("MySQL MaxParams must be > 0, got %d", got)
 	}
-	if got := (Postgres{}).MaxParams(); got <= 0 {
+	if got := (dialect.Postgres{}).MaxParams(); got <= 0 {
 		t.Fatalf("Postgres MaxParams must be > 0, got %d", got)
 	}
 }

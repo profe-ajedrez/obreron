@@ -2,23 +2,36 @@ package obreron
 
 import "github.com/profe-ajedrez/obreron/v3/dialect"
 
+// UpdateStm is the builder for UPDATE statements.
+//
+// It is NOT concurrency-safe.
 type UpdateStm struct {
-	d     dialect.Dialect
-	table string
+	st *stament
 }
 
-func newUpdate(d dialect.Dialect, table string) *UpdateStm { return &UpdateStm{d: d, table: table} }
+func newUpdate(d dialect.Dialect) *UpdateStm {
+	return &UpdateStm{st: acquireStament(d)}
+}
 
-func (st *UpdateStm) Build() (string, []any, error) { return "", nil, nil }
+// Build assembles the SQL and returns it with a defensive copy of args.
+func (s *UpdateStm) Build() (string, []any, error) {
+	buf, args, err := s.st.buildInto(nil, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	return string(buf), args, nil
+}
 
-func (st *UpdateStm) MustBuild() (string, []any) {
-	s, a, err := st.Build()
+// MustBuild panics if Build returns an error.
+func (s *UpdateStm) MustBuild() (string, []any) {
+	sql, args, err := s.Build()
 	if err != nil {
 		panic(err)
 	}
-	return s, a
+	return sql, args
 }
 
-func (st *UpdateStm) BuildInto(buf []byte, args []any) ([]byte, []any, error) {
-	return buf, args, nil
+// BuildInto assembles into caller-owned buffers to avoid allocation.
+func (s *UpdateStm) BuildInto(buf []byte, args []any) ([]byte, []any, error) {
+	return s.st.buildInto(buf, args)
 }

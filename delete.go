@@ -3,21 +3,25 @@ package obreron
 import "github.com/profe-ajedrez/obreron/v3/dialect"
 
 type DeleteStm struct {
-	d dialect.Dialect
+	st *stament
 }
 
-func newDelete(d dialect.Dialect) *DeleteStm { return &DeleteStm{d: d} }
+func newDelete(d dialect.Dialect) *DeleteStm { return &DeleteStm{st: acquireStament(d)} }
 
-func (st *DeleteStm) Build() (string, []any, error) { return "", nil, nil }
+// Build builds the SQL and args.
+func (ds *DeleteStm) Build() (string, []any, error) {
+	return ds.st.build()
+}
 
-func (st *DeleteStm) MustBuild() (string, []any) {
-	s, a, err := st.Build()
+// BuildInto builds into caller-owned buffers.
+func (ds *DeleteStm) BuildInto(buf []byte, args []any) ([]byte, []any, error) {
+	return ds.st.buildInto(buf, args)
+}
+
+func (ds *DeleteStm) MustBuild() (string, []any) {
+	s, a, err := ds.Build()
 	if err != nil {
 		panic(err)
 	}
 	return s, a
-}
-
-func (st *DeleteStm) BuildInto(buf []byte, args []any) ([]byte, []any, error) {
-	return buf, args, nil
 }

@@ -3,21 +3,25 @@ package obreron
 import "github.com/profe-ajedrez/obreron/v3/dialect"
 
 type InsertStatement struct {
-	d dialect.Dialect
+	st *stament
 }
 
-func newInsert(d dialect.Dialect) *InsertStatement { return &InsertStatement{d: d} }
+func newInsert(d dialect.Dialect) *InsertStatement { return &InsertStatement{st: acquireStament(d)} }
 
-func (st *InsertStatement) Build() (string, []any, error) { return "", nil, nil }
+// Build builds the SQL and args.
+func (in *InsertStatement) Build() (string, []any, error) {
+	return in.st.build()
+}
 
-func (st *InsertStatement) MustBuild() (string, []any) {
-	s, a, err := st.Build()
+// BuildInto builds into caller-owned buffers.
+func (in *InsertStatement) BuildInto(buf []byte, args []any) ([]byte, []any, error) {
+	return in.st.buildInto(buf, args)
+}
+
+func (in *InsertStatement) MustBuild() (string, []any) {
+	s, a, err := in.Build()
 	if err != nil {
 		panic(err)
 	}
 	return s, a
-}
-
-func (st *InsertStatement) BuildInto(buf []byte, args []any) ([]byte, []any, error) {
-	return buf, args, nil
 }
