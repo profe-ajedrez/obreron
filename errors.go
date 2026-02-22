@@ -34,8 +34,7 @@ var (
 // It supports errors.Is / errors.As via Unwrap.
 //
 // Example error string:
-//
-//	obreron [FROM/postgres]: obreron: SELECT/DELETE requires a FROM clause
+//   obreron [FROM/postgres]: obreron: SELECT/DELETE requires a FROM clause
 type BuildError struct {
 	Op      string // e.g. "SELECT", "FROM", "WHERE", "INSERT"
 	Dialect string // dialect name at the time of failure

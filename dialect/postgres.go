@@ -29,4 +29,7 @@ func (Postgres) Name() string { return "postgres" }
 
 func (Postgres) SupportsReturning() bool { return true }
 
-func (Postgres) MaxParams() int { return 0 }
+// MaxParams returns a conservative positional-parameter limit for PostgreSQL
+// bind parameters. The extended query protocol uses uint16 for parameter count
+// (max 65535).
+func (Postgres) MaxParams() int { return 65_535 }
